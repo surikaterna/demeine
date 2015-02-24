@@ -17,7 +17,7 @@ describe('Repository', function() {
 					return -1;
 				}
 				this.append = function() {};
-				this.commit = function() {};
+				this.commit = function() { return Promise.resolve(null);};
 			}
 			return Promise.resolve(new Stream(streamId));
 		}
