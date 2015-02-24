@@ -1,0 +1,38 @@
+{
+  "name": "demeine",
+  "version": "0.0.0",
+  "description": "DDDD - Distributed Domain Driven Design",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test --recursive",
+    "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --recursive test -u exports -R spec",
+    "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
+    "jshint": "jshint ./lib",
+    "jscs": "jscs -p google ./lib ./test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/surikaterna/demeine.git"
+  },
+  "keywords": [
+    "dddd",
+    "domain",
+    "cqrs"
+  ],
+  "author": "Surikat AB",
+  "license": "MIT",
+  "devDependencies": {
+    "istanbul": "^0.3.2",
+    "jscs": "^1.11.3",
+    "jshint": "^2.5.10",
+    "mocha": "^2.0.1",
+    "should": "^4.1.0"
+  },
+  "bugs": {
+    "url": "https://github.com/surikaterna/demeine/issues"
+  },
+  "homepage": "https://github.com/surikaterna/demeine",
+  "dependencies": {
+    "bluebird": "^2.9.12"
+  }
+}
