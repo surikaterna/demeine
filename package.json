@@ -33,6 +33,8 @@
   },
   "homepage": "https://github.com/surikaterna/demeine",
   "dependencies": {
-    "bluebird": "^2.9.12"
+    "bluebird": "^2.9.12",
+    "lodash": "^4.0.0",
+    "node-uuid": "^1.4.7"
   }
 }
