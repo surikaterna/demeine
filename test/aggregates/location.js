@@ -12,11 +12,11 @@ Location.prototype.changeName = function(newName) {
 	this._sink({type:'location.change_name.command', payload:newName, aggregateId: 1 });
 };
 
-Location.prototype.processChangename = function(command) {
+Location.prototype.processChangeName = function(command) {
 	this._apply({type:'location.changed_name.event', payload:command.payload, aggregateId: 1}, true);
 };
 
-Location.prototype.applyChangedname = function(event) {
+Location.prototype.applyChangedName = function(event) {
 	//change local state if necessary for validation
 };
 
