@@ -26,8 +26,7 @@
     "jscs": "^1.11.3",
     "jshint": "^2.5.10",
     "mocha": "^2.0.1",
-    "should": "^4.1.0",
-    "lodash": "^3.10.1"
+    "should": "^4.1.0"
   },
   "bugs": {
     "url": "https://github.com/surikaterna/demeine/issues"
