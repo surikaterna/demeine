@@ -1,6 +1,6 @@
-var sdebug = require('slf-debug').default;
-require('slf').LoggerFactory.setFactory(sdebug);
-require('debug').enable('*');
+// var sdebug = require('slf-debug').default;
+// require('slf').LoggerFactory.setFactory(sdebug);
+// require('debug').enable('*');
 
 var should = require('should');
 var Promise = require('bluebird');

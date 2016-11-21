@@ -33,7 +33,7 @@ Location.prototype.changeNameAsync = function(newName) {
   var promise = new Promise(function (resolve, reject) {
     setTimeout(function () {
       resolve({type: 'location.change_name.command', payload: newName, aggregateId: 1 })
-    }, 50)
+    }, 100)
   });
 	return this._sink(promise);
 };
