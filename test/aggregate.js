@@ -19,24 +19,18 @@ describe('Aggregate', function () {
   describe('#_sink (with promise)', function () {
     it('_sink with promise should resolve promise before processing', function (done) {
       var loc = new Location();
-      loc.changeNameAsync('FIRST-CHANGE').then(function (res) {
-        loc.getUncommittedEventsAsync().then(function (res) {
-          res.length.should.equal(3);
-        })
+      loc.changeNameAsync('FIRST-CHANGE');
+      loc.changeName('SECOND-CHANGE');
+      loc.changeNameAsync('THIRD-CHANGE');
+      should.throws(function () {
+        // Should throw if trying to get uncommitted events while still processing
+        loc.getUncommittedEvents();
       });
-      loc.changeName('SECOND-CHANGE').then(function (res) {
-        loc.getUncommittedEventsAsync().then(function (res) {
-          res.length.should.equal(3);
-        })
-      });
-      loc.changeNameAsync('THIRD-CHANGE').then(function (res) {
-        res.getUncommittedEventsAsync().then(function (res) {
-          res[0].payload.should.equal('FIRST-CHANGE');
-          res[1].payload.should.equal('SECOND-CHANGE');
-          res[2].payload.should.equal('THIRD-CHANGE');
-        })
-      });
+
       loc.getUncommittedEventsAsync().then(function (res) {
+        res[0].payload.should.equal('FIRST-CHANGE');
+        res[1].payload.should.equal('SECOND-CHANGE');
+        res[2].payload.should.equal('THIRD-CHANGE');
         res.length.should.equal(3);
         done();
       })
@@ -52,17 +46,18 @@ describe('Aggregate', function () {
     });
     it('should return promise error when failure in process', function (done) {
       var loc = new Location();
-      loc.failName('test').then(function (result) {
-        done(new Error('Unreachable'));
-      }).error(function (e) {
-        loc.getUncommittedEvents().length.should.equal(0);
-        done();
-      });
+      loc.failName('test')
+        .then(function (result) {
+          done(new Error('Unreachable'));
+        })
+        .error(function (e) {
+          loc.getUncommittedEvents().length.should.equal(0);
+          done();
+        });
     });
     it('should return promise error when failure in process by throwing', function (done) {
       var loc = new Location();
       loc.failName('fail early').then(function (result) {
-        console.log('fail 2');
         done(new Error('Unreachable'));
       }).error(function (e) {
         loc.getUncommittedEvents().length.should.equal(0);
