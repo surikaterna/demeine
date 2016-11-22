@@ -56,7 +56,6 @@ Location.prototype.failName = function(newName) {
 
 Location.prototype.processFailName = function(command) {
   var self = this;
-  console.log('PROCESS');
   if(command.payload === 'fail early') {
     throw new Error('Failing early');
   }
