@@ -51,18 +51,53 @@ describe('Aggregate', function () {
           done(new Error('Unreachable'));
         })
         .error(function (e) {
-          loc.getUncommittedEvents().length.should.equal(0);
-          done();
+          loc.getUncommittedEventsAsync().then(function (res) {
+            res.length.should.equal(0);
+            done();
+          });
         });
     });
     it('should return promise error when failure in process by throwing', function (done) {
       var loc = new Location();
-      loc.failName('fail early').then(function (result) {
-        done(new Error('Unreachable'));
-      }).error(function (e) {
-        loc.getUncommittedEvents().length.should.equal(0);
-        done();
-      });
+      loc.failName('fail early')
+        .then(function (result) {
+          done(new Error('Unreachable'));
+        })
+        .error(function (e) {
+//          loc.getUncommittedEventsAsync().then(function (res) {
+  //          res.length.should.equal(0);
+            done();
+    //      });
+        });
+    });
+    it('should get error', function (done) {
+      var promise = giefPromisePlz();
+      promise
+        .then(function (res) {
+          console.log('res', res);
+          done(new Error('Unreachable'));
+        })
+        .error(function (err) {
+          console.log('ERR', err);
+          done();
+        });
     });
   });
 });
+
+var giefPromisePlz = function () {
+  return new Promise(function (resolve, reject) {
+    try {
+      var functionThatThrows = function () {
+        throw new Error('error is thrown!');
+      };
+      var test = functionThatThrows();
+      resolve(test);
+    } catch (error) {
+      reject(error);
+    }
+  }).error(function (error) {
+    console.log('Failed to process');
+    throw error;
+  });
+}

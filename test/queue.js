@@ -1,7 +1,5 @@
 var should = require('should');
 var Queue = require('../lib/queue');
-var Promise = require('bluebird');
-
 
 describe('Queue', function () {
   describe('#queue', function () {
