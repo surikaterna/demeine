@@ -34,6 +34,12 @@ describe('Queue', function () {
           done();
         });
     });
+    it('should return promise that is resolved directly when not running', function (done) {
+      var queue = new Queue();
+      queue.empty().then(function () {
+        done();
+      })
+    });
 
   });
 });

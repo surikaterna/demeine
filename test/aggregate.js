@@ -22,6 +22,7 @@ describe('Aggregate', function () {
       loc.changeNameAsync('FIRST-CHANGE');
       loc.changeName('SECOND-CHANGE');
       loc.changeNameAsync('THIRD-CHANGE');
+
       should.throws(function () {
         // Should throw if trying to get uncommitted events while still processing
         loc.getUncommittedEvents();
@@ -64,10 +65,10 @@ describe('Aggregate', function () {
           done(new Error('Unreachable'));
         })
         .error(function (e) {
-//          loc.getUncommittedEventsAsync().then(function (res) {
-  //          res.length.should.equal(0);
+         loc.getUncommittedEventsAsync().then(function (res) {
+           res.length.should.equal(0);
             done();
-    //      });
+         });
         });
     });
     it('should get error', function (done) {
