@@ -63,7 +63,7 @@ describe('Repository', function() {
 					done();
 				});
 			}).catch(function(err) {
-				throw new Error('Should not get here...')
+				done(err);
 			});
 		});		
 	});
