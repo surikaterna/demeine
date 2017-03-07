@@ -60,10 +60,10 @@ describe('Repository', function() {
 				location.changeName('New Name');
 				repo.save(location).then(function(x) {
 					x.getUncommittedEvents().length.should.equal(0);
+					done();
 				});
-				done();
 			}).catch(function(err) {
-				done(err);
+				throw new Error('Should not get here...')
 			});
 		});		
 	});
