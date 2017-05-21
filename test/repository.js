@@ -106,14 +106,30 @@ describe('Repository', function () {
       repo.findById('1').then(function (aggregate) {
         if (aggregate instanceof Location) {
           aggregate._getSnapshot().name.should.equal('hello');
+          aggregate.getVersion().should.equal(1);
           done();
         } else {
           done('Wrong type created');
         }
       }).catch(function (err) {
         done(err);
-      });;
+      });
     });
+    it('hydrates aggregates with snapshot and events', function (done) {
+      var factory = function () { return new Location(); };
+      var repo = new Repository(new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [{ id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello' }, { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello, world' }]), 'location', factory);
+      repo.findById('1').then(function (aggregate) {
+        if (aggregate instanceof Location) {
+          aggregate._getSnapshot().name.should.equal('Hello, world');
+          aggregate.getVersion().should.equal(2);
+          done();
+        } else {
+          done('Wrong type created');
+        }
+      }).catch(function (err) {
+        done(err);
+      });
+    });    
     it('hydrates aggregates without snapshot', function (done) {
       var factory = function () { return new Location(); };
       var repo = new Repository(new SnapshotPartition(undefined, [{ id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello' }]), 'location', factory);
@@ -126,7 +142,7 @@ describe('Repository', function () {
         }
       }).catch(function (err) {
         done(err);
-      });;
+      });
     });
     it('stores snapshot for aggregate on save', function (done) {
       var factory = function () { return new Location(); };
