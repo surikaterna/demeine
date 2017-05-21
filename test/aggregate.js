@@ -1,7 +1,7 @@
 var Promise = require('bluebird');
 var sdebug = require('slf-debug').default;
 require('slf').LoggerFactory.setFactory(sdebug);
-require('debug').enable('*');
+//require('debug').enable('*');
 var should = require('should');
 
 var Location = require('./aggregates/location');
@@ -41,7 +41,6 @@ describe('Aggregate', function () {
     it('should wait for promise', function (done) {
       var loc = new Location();
       loc.changeName('test').then(function (result) {
-        console.log(result);
         done();
       });
     });
@@ -75,11 +74,9 @@ describe('Aggregate', function () {
       var promise = giefPromisePlz();
       promise
         .then(function (res) {
-          console.log('res', res);
           done(new Error('Unreachable'));
         })
         .error(function (err) {
-          console.log('ERR', err);
           done();
         });
     });
@@ -98,7 +95,6 @@ var giefPromisePlz = function () {
       reject(error);
     }
   }).error(function (error) {
-    console.log('Failed to process');
     throw error;
   });
 }
