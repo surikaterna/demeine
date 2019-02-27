@@ -9,6 +9,7 @@ import CommandHandler from './CommandHandler';
 
 import DefaultEventHandler from './DefaultEventHandler';
 import DefaultCommandHandler from './DefaultCommandHandler';
+import CommandSink from './CommandSink';
 
 var LOG = require('slf').Logger.getLogger('demeine:aggregate');
 
@@ -20,44 +21,41 @@ function _promise(result: Promise<any>, warning: string) {
   return result;
 }
 
-interface Command {
-  id: string,
+export interface Command {
+  id?: string,
   type: string
   aggregateId: string,
-  aggregateType: string
+  aggregateType?: string,
+  payload: any
 }
 
 interface AggregateX {
   [key: string]: Function
 }
 
-interface Sink {
-  sink(command: Command, aggregate?: Aggregate<any>): any
-}
-
-class DummySink<StateType> implements Sink {
+class DummySink<StateType> implements CommandSink {
   _aggregate: Aggregate<StateType>;
   constructor(aggregate: Aggregate<any>) {
     this._aggregate = aggregate;
   }
   sink(command: Command) {
-    this._aggregate._process(command);
+    return this._aggregate._process(command);
   }
 }
 
-export default class Aggregate<StateType> {
+export default abstract class Aggregate<StateType> {
   id: string = ''; //aggregate id
   type?: string; //aggregate type
 
   _uncommittedEvents: Event[] = [];
-  _commandSink: Sink;
+  _commandSink: CommandSink;
   _eventHandler: EventHandler;
   _commandHandler: CommandHandler;
   _version: number = 0;
   _commandQueue: Queue = new Queue();
-  _state?: StateType;
+  abstract _state: StateType;
 
-  constructor(commandSink?: Sink, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
+  constructor(commandSink?: CommandSink, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
     var self = this;
     this._uncommittedEvents = [];
     this._commandSink = commandSink || new DummySink(this);
@@ -125,7 +123,7 @@ export default class Aggregate<StateType> {
   };
 
 
-  _sink(commandToSink: Command) {
+  _sink(commandToSink: Command | Promise<Command>) {
     LOG.info('sinking command %j', commandToSink);
     return this._commandQueue.queueCommand(() => {
       var thenned = Promise.resolve(commandToSink);
@@ -156,7 +154,7 @@ export default class Aggregate<StateType> {
     return this._version;
   };
 
-  getUncommittedEvents() {
+  getUncommittedEvents(): Event[] {
     //throw if async cmd is on queue
     if (this._commandQueue.isProcessing()) {
       throw new Error("Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()")

@@ -1,25 +1,31 @@
-var Aggregate = require('../..').Aggregate;
+import { Aggregate } from '../..';
+import EventHandler from '../../src/EventHandler';
+import CommandSink from '../../src/CommandSink';
+import { Command } from '../../src/Aggregate';
+import Event from '../../src/Event';
 // var Promise = require('bluebird');
+export interface LocationState {
+  name: string
+}
 
-export default class Location extends Aggregate<object> {
-
-  constructor(commandSink, eventHandler) {
+export default class Location extends Aggregate<LocationState> {
+  _state: LocationState = { name: '' }
+  constructor(commandSink?: CommandSink, eventHandler?: EventHandler) {
     super(commandSink, eventHandler);
-    this.id = 1
-    this._state = {};
+    this.id = '1'
   }
 
   // --------- CHANGE NAME
 
-  changeName(newName) {
-    return this._sink({ type: 'location.change_name.command', payload: newName, aggregateId: 1 });
+  changeName(newName: string) {
+    return this._sink({ type: 'location.change_name.command', payload: newName, aggregateId: '1' });
   };
 
-  processChangeName(command) {
-    return this._apply({ type: 'location.changed_name.event', payload: command.payload, aggregateId: 1 }, true);
+  processChangeName(command: Command) {
+    return this._apply({ type: 'location.changed_name.event', payload: command.payload, aggregateId: '1' }, true);
   };
 
-  applyChangedName(event) {
+  applyChangedName(event: Event) {
     //change local state if necessary for validation
     this._state.name = event.payload;
   };
@@ -28,20 +34,20 @@ export default class Location extends Aggregate<object> {
 
   // --------- CHANGE NAME (PROMISE)
 
-  changeNameAsync(newName) {
-    var promise = new Promise(function (resolve, reject) {
+  changeNameAsync(newName: string) {
+    const promise = new Promise<Command>(function (resolve, reject) {
       setTimeout(function () {
-        resolve({ type: 'location.change_name.command', payload: newName, aggregateId: 1 })
+        resolve({ type: 'location.change_name.command', payload: newName, aggregateId: '1' })
       }, 50)
     });
     return this._sink(promise);
   };
 
-  processChangeNameAsync(command) {
-    return this._apply({ type: 'location.changed_name.event', payload: command.payload, aggregateId: 1 }, true);
+  processChangeNameAsync(command: Command) {
+    return this._apply({ type: 'location.changed_name.event', payload: command.payload, aggregateId: '1' }, true);
   };
 
-  applyChangedNameAsync(event) {
+  applyChangedNameAsync(event: Event) {
     this._state.name = event.payload;
   };
 
@@ -49,22 +55,22 @@ export default class Location extends Aggregate<object> {
 
   // --------- FAIL NAME
 
-  failName(newName) {
-    return this._sink({ type: 'location.fail_name.command', payload: newName, aggregateId: 1 });
+  failName(newName: string) {
+    return this._sink({ type: 'location.fail_name.command', payload: newName, aggregateId: '1' });
   };
 
-  processFailName(command) {
+  processFailName(command: Command) {
     var self = this;
     if (command.payload === 'fail early') {
       throw new Error('Failing early');
     }
     return new Promise(function (resolve, reject) {
-      self._apply({ type: 'location.changed_name.event', payload: command.payload, aggregateId: 1 }, true);
+      self._apply({ type: 'location.changed_name.event', payload: command.payload, aggregateId: '1' }, true);
       reject(new Error('uh oh'))
     });
   };
 
-  applyFailedName(event) {
+  applyFailedName(event: Event) {
     //change local state if necessary for validation
   };
 }

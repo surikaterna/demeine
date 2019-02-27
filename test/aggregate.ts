@@ -1,9 +1,12 @@
+import * as should from 'should'
 import Location from './aggregates/Location';
-var Promise = require('bluebird');
+// require('should')
+// var Promise = require('bluebird');
+
 var sdebug = require('slf-debug').default;
 require('slf').LoggerFactory.setFactory(sdebug);
 //require('debug').enable('*');
-var should = require('should');
+
 
 
 describe('Aggregate', function () {
@@ -47,10 +50,10 @@ describe('Aggregate', function () {
     it('should return promise error when failure in process', function (done) {
       var loc = new Location();
       loc.failName('test')
-        .then(function (result) {
+        .then(function () {
           done(new Error('Unreachable'));
         })
-        .error(function (e) {
+        .catch(function () {
           loc.getUncommittedEventsAsync().then(function (res) {
             res.length.should.equal(0);
             done();
@@ -60,10 +63,10 @@ describe('Aggregate', function () {
     it('should return promise error when failure in process by throwing', function (done) {
       var loc = new Location();
       loc.failName('fail early')
-        .then(function (result) {
+        .then(function () {
           done(new Error('Unreachable'));
         })
-        .error(function (e) {
+        .catch(function () {
           loc.getUncommittedEventsAsync().then(function (res) {
             res.length.should.equal(0);
             done();
@@ -73,10 +76,10 @@ describe('Aggregate', function () {
     it('should get error', function (done) {
       var promise = giefPromisePlz();
       promise
-        .then(function (res) {
+        .then(function () {
           done(new Error('Unreachable'));
         })
-        .error(function (err) {
+        .catch(function () {
           done();
         });
     });
@@ -94,7 +97,7 @@ var giefPromisePlz = function () {
     } catch (error) {
       reject(error);
     }
-  }).error(function (error) {
+  }).catch(function (error) {
     throw error;
   });
 }

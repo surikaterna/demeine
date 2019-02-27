@@ -19,7 +19,7 @@ interface StreamWithSnapshot {
 interface Stream {
   _version: number;
   getCommittedEvents(): Event[];
-  getUncommittedEventsAsync(): Promise<Event[]>;
+  getUncommittedEventsAsync?(): Promise<Event[]>;
   getVersion(): number;
   append(event: Event): void;
   commit(id?: string): Promise<any>
@@ -29,8 +29,8 @@ interface Partition {
   openStream(id: string): Promise<Stream>;
   queryStream(id: string, fromVersion?: number): Promise<Commit[]>;
   queryStreamWithSnapshot?(id: string): Promise<StreamWithSnapshot>;
-  loadSnapshot?(id: string): Promise<Snapshot>;
-  storeSnapshot(aggregateId: string, snapshot: object, version: number):void;
+  loadSnapshot?(id: string): Promise<Snapshot|undefined>;
+  storeSnapshot?(aggregateId: string, snapshot: object, version: number):void;
 }
 
 var LOG = require('slf').Logger.getLogger('demeine:repository');
@@ -42,14 +42,14 @@ export default class Repository {
   _aggregateType: string;
   _concurrencyStrategy?: Function;
 
-  constructor(partition: Partition, aggregateType: string, factory: Function, concurrencyStrategy?: Function) {
+  constructor(partition: Partition, aggregateType: string, factory?: Function, concurrencyStrategy?: Function) {
     this._partition = partition;
     this._factory = factory || defaultFactory(aggregateType);
     this._aggregateType = aggregateType;
     this._concurrencyStrategy = concurrencyStrategy;
   };
 
-  findById(id: string, callback: Function) {
+  findById(id: string, callback?: Function) {
     LOG.info('%s findById(%s)', this.aggregateType, id);
     const aggregate = this._factory(id);
     // const hasSnapshot = this._partition.loadSnapshot !== undefined;
@@ -90,7 +90,7 @@ export default class Repository {
     }
   };
 
-  findEventsById(id: string, callback: Function) {
+  findEventsById(id: string, callback?: Function) {
     LOG.info('%s findEventsById(%s)', this.aggregateType, id);
     return this._partition.openStream(id).then(function (stream) {
       var events = stream.getCommittedEvents();
@@ -98,7 +98,7 @@ export default class Repository {
     }).nodeify(callback);
   };
 
-  save(aggregate: Aggregate<any>, commitId: string, callback: Function) {
+  save(aggregate: Aggregate<any>, commitId?: string, callback?: Function) : Promise<Aggregate<any>> {
     var savingWithId = commitId;
     var self = this;
     return this._partition.openStream(aggregate.id).then(function (stream) {
