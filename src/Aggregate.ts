@@ -11,9 +11,10 @@ import DefaultEventHandler from './DefaultEventHandler';
 import DefaultCommandHandler from './DefaultCommandHandler';
 import CommandSink from './CommandSink';
 
-var LOG = require('slf').Logger.getLogger('demeine:aggregate');
+const LOG = require('slf').Logger.getLogger('demeine:aggregate');
 
-function _promise(result: Promise<any>, warning: string) {
+function makePromise(promise: Promise<any>, warning: string) {
+  let result: Promise<any> = promise;
   if (!result || !result.then) {
     LOG.warn(warning || 'not returning promise as expected');
     result = Promise.resolve(true);
@@ -22,15 +23,15 @@ function _promise(result: Promise<any>, warning: string) {
 }
 
 export interface Command {
-  id?: string,
-  type: string
-  aggregateId: string,
-  aggregateType?: string,
-  payload: any
+  id?: string;
+  type: string;
+  aggregateId: string;
+  aggregateType?: string;
+  payload: any;
 }
 
 interface AggregateX {
-  [key: string]: Function
+  [key: string]: Function;
 }
 
 class DummySink<StateType> implements CommandSink {
@@ -44,8 +45,8 @@ class DummySink<StateType> implements CommandSink {
 }
 
 export default abstract class Aggregate<StateType> {
-  id: string = ''; //aggregate id
-  type?: string; //aggregate type
+  id: string = ''; // aggregate id
+  type?: string; // aggregate type
 
   _uncommittedEvents: Event[] = [];
   _commandSink: CommandSink;
@@ -56,12 +57,11 @@ export default abstract class Aggregate<StateType> {
   abstract _state: StateType;
 
   constructor(commandSink?: CommandSink, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
-    var self = this;
     this._uncommittedEvents = [];
     this._commandSink = commandSink || new DummySink(this);
     this._eventHandler = eventHandler || new DefaultEventHandler();
     this._commandHandler = commandHandler || new DefaultCommandHandler();
-  };
+  }
 
   _rehydrate(events: any[], version: number, snapshot: StateType) {
     LOG.info('rehydrating aggregate with %d events to version %d has snapshot %s', events.length, version, snapshot !== undefined);
@@ -69,11 +69,11 @@ export default abstract class Aggregate<StateType> {
     if (snapshot) {
       this._state = snapshot;
     }
-    for (var i = 0; i < events.length; i++) {
+    for (let i = 0; i < events.length; i++) {
       this._apply(events[i], false);
     }
     this._version = version || this._version;
-  };
+  }
 
   _getSnapshot() {
     return this._state;
@@ -87,10 +87,10 @@ export default abstract class Aggregate<StateType> {
     }
     if (!event.type || !event.aggregateId || event.aggregateId != this.id) {
       LOG.error('event is missing data %j', event);
-      throw new Error('event is missing data ' + JSON.stringify(event));
+      throw new Error(`event is missing data ${JSON.stringify(event)}`);
     }
     this._eventHandler.handle(this, event);
-    if (this._version == -1) {
+    if (this._version === -1) {
       this._version = 0;
     }
 
@@ -104,13 +104,13 @@ export default abstract class Aggregate<StateType> {
 		this._committedEvents.push(event);
 	}*/
     return this;
-  };
+  }
 
   _process(command: Command) {
     LOG.info('processing command %j', command);
     return new Promise((resolve, reject) => {
       try {
-        var handler = this._commandHandler.handle(this, command);
+        const handler = this._commandHandler.handle(this, command);
         resolve(handler);
       } catch (error) {
         reject(error);
@@ -120,13 +120,12 @@ export default abstract class Aggregate<StateType> {
       this.clearUncommittedEvents();
       throw error;
     });
-  };
-
+  }
 
   _sink(commandToSink: Command | Promise<Command>) {
     LOG.info('sinking command %j', commandToSink);
     return this._commandQueue.queueCommand(() => {
-      var thenned = Promise.resolve(commandToSink);
+      let thenned = Promise.resolve(commandToSink);
       thenned = thenned
         .then((command: Command) => {
           if (!command.id) {
@@ -135,42 +134,40 @@ export default abstract class Aggregate<StateType> {
           }
           // console.log(command.aggregateId + " || " + self.id);
           if (!command.type || !command.aggregateId || command.aggregateId != this.id) {
-            var error = new Error('command is missing data ' + JSON.stringify(command));
+            const error = new Error('command is missing data ' + JSON.stringify(command));
             LOG.error('Unable to sink command %j', command);
             throw error;
           }
           if (this.type) {
             command.aggregateType = this.type;
           }
-          var result = this._commandSink.sink(command, this);
-          return _promise(result, 'sinking command but not returning promise, commands status and chaining might not work as expected');
-        })
-      //console.log('thenn', thenned);
+          const result = this._commandSink.sink(command, this);
+          return makePromise(result, 'sinking command but not returning promise, commands status and chaining might not work as expected');
+        });
+      // console.log('thenn', thenned);
       return thenned;
     });
-  };
+  }
 
   getVersion() {
     return this._version;
-  };
+  }
 
   getUncommittedEvents(): Event[] {
-    //throw if async cmd is on queue
+    // throw if async cmd is on queue
     if (this._commandQueue.isProcessing()) {
-      throw new Error("Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()")
+      throw new Error('Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()');
     }
     return this._uncommittedEvents;
   }
 
   getUncommittedEventsAsync(): Promise<Event[]> {
-    var self = this;
-    return self._commandQueue.empty().then(function () {
-      if (self._commandQueue.isProcessing()) {
-        return self.getUncommittedEventsAsync();
-      } else {
-        return self.getUncommittedEvents();
+    return this._commandQueue.empty().then(() => {
+      if (this._commandQueue.isProcessing()) {
+        return this.getUncommittedEventsAsync();
       }
-    })
+      return this.getUncommittedEvents();
+    });
   }
 
   clearUncommittedEvents() {

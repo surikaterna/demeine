@@ -11,7 +11,7 @@
     "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
     "jscs": "jscs -p google ./lib ./test",
     "lint": "tslint -p tsconfig.json",
-    "lint-fix": "tslint -p tsconfig.json --fix 'src/**/*.{ts,tsx}' -t verbose"
+    "lint.fix": "tslint -p tsconfig.json --fix src/**/*.{ts,tsx} -t verbose"
   },
   "repository": {
     "type": "git",

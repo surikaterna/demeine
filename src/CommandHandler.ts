@@ -1,8 +1,7 @@
 import Aggregate from './Aggregate';
 
-
 interface Command {
-	type: string
+  type: string;
 }
 
 export default interface CommandHandler {

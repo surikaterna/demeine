@@ -9,7 +9,7 @@ interface Commit {
 }
 interface Snapshot {
   version: number;
-  snapshot: object
+  snapshot: object;
 }
 interface StreamWithSnapshot {
   commits: Commit[];
@@ -22,7 +22,7 @@ interface Stream {
   getUncommittedEventsAsync?(): Promise<Event[]>;
   getVersion(): number;
   append(event: Event): void;
-  commit(id?: string): Promise<any>
+  commit(id?: string): Promise<any>;
 }
 
 interface Partition {
@@ -33,7 +33,7 @@ interface Partition {
   storeSnapshot?(aggregateId: string, snapshot: object, version: number):void;
 }
 
-var LOG = require('slf').Logger.getLogger('demeine:repository');
+const LOG = require('slf').Logger.getLogger('demeine:repository');
 
 export default class Repository {
   aggregateType?: string;
@@ -47,7 +47,7 @@ export default class Repository {
     this._factory = factory || defaultFactory(aggregateType);
     this._aggregateType = aggregateType;
     this._concurrencyStrategy = concurrencyStrategy;
-  };
+  }
 
   findById(id: string, callback?: Function) {
     LOG.info('%s findById(%s)', this.aggregateType, id);
@@ -64,57 +64,57 @@ export default class Repository {
             events = events.concat(commit.events);
           });
         }
-        var version = (snapshot && snapshot.version || 0) + events.length;
+        const version = (snapshot && snapshot.version || 0) + events.length;
         aggregate._rehydrate(events, version, snapshot && snapshot.snapshot);
         return aggregate;
       }).nodeify(callback);
-    } else if (this._partition.loadSnapshot !== undefined) {
+    }  if (this._partition.loadSnapshot !== undefined) {
       return this._partition.loadSnapshot(id).then((snapshot) => {
         return this._partition.queryStream(id, (snapshot && snapshot.version) || 0).then(function (commits) {
           let events: Event[] = [];
           commits.forEach(function (commit) {
             events = events.concat(commit.events);
           });
-          var version = (snapshot && snapshot.version || 0) + events.length;
+          const version = (snapshot && snapshot.version || 0) + events.length;
           aggregate._rehydrate(events, version, snapshot && snapshot.snapshot);
           return aggregate;
-        })
+        });
       }).nodeify(callback);
-    } else {
+    } 
       return this._partition.openStream(id).then(function (stream) {
-        var events = stream.getCommittedEvents();
-        var version = stream.getVersion();
+        const events = stream.getCommittedEvents();
+        const version = stream.getVersion();
         aggregate._rehydrate(events, version);
         return aggregate;
       }).nodeify(callback);
-    }
-  };
+    
+  }
 
   findEventsById(id: string, callback?: Function) {
     LOG.info('%s findEventsById(%s)', this.aggregateType, id);
     return this._partition.openStream(id).then(function (stream) {
-      var events = stream.getCommittedEvents();
+      const events = stream.getCommittedEvents();
       return events;
     }).nodeify(callback);
-  };
+  }
 
   save(aggregate: Aggregate<any>, commitId?: string, callback?: Function) : Promise<Aggregate<any>> {
-    var savingWithId = commitId;
-    var self = this;
+    let savingWithId = commitId;
+    const self = this;
     return this._partition.openStream(aggregate.id).then(function (stream) {
       return aggregate
         .getUncommittedEventsAsync()
         .then(function (events) {
           // check if there is a conflict with event version /sequence
-          var isNewStream = stream._version === -1;
+          const isNewStream = stream._version === -1;
           if (!isNewStream && self._concurrencyStrategy) {
-            var numberOfEvents = events.length;
-            var nextStreamVersion = stream._version + numberOfEvents;
+            const numberOfEvents = events.length;
+            const nextStreamVersion = stream._version + numberOfEvents;
             if (nextStreamVersion > aggregate._version) {
               // if so ask concurrency strategy if still ok or if it needs to throw
-              var shouldThrow = self._concurrencyStrategy(events, stream.getCommittedEvents());
+              const shouldThrow = self._concurrencyStrategy(events, stream.getCommittedEvents());
               if (shouldThrow === true) {
-                throw new Error("Concurrency error. Version mismatch on stream")
+                throw new Error('Concurrency error. Version mismatch on stream');
               }
             }
           }
@@ -137,6 +137,6 @@ export default class Repository {
           });
         });
     }).nodeify(callback);
-  };
+  }
 
 }

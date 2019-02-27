@@ -18,16 +18,14 @@ let LocalPromise = typeof Promise !== 'undefined' ? Promise : function () {
 var noop() { };
 */
 
-
-
 interface QueueOptions {
-  onEmpty?: Function
+  onEmpty?: Function;
 }
 
 interface QueueItem {
-  promiseGenerator: Function,
-  resolve: Function,
-  reject: Function
+  promiseGenerator: Function;
+  resolve: Function;
+  reject: Function;
 }
 
 /**
@@ -63,7 +61,7 @@ export default class Queue {
   pendingPromises: number = 0;
   maxPendingPromises: number = Infinity;
   maxQueuedPromises: number = Infinity;
-  queue: QueueItem[] = []
+  queue: QueueItem[] = [];
   constructor(maxPendingPromises: number, maxQueuedPromises: number, options: QueueOptions) {
     this.options = options = options || {};
     this.maxPendingPromises = maxPendingPromises || Infinity;
@@ -76,7 +74,7 @@ export default class Queue {
    */
   static configure(GlobalPromise: PromiseConstructor) {
     Queue.LocalPromise = GlobalPromise;
-  };
+  }
 
   /**
    * @param {Function} promiseGenerator
@@ -92,15 +90,15 @@ export default class Queue {
 
       // Add to queue
       this.queue.push({
-        promiseGenerator: promiseGenerator,
-        resolve: resolve,
-        reject: reject
+        promiseGenerator,
+        resolve,
+        reject
         // notify: notify || noop
       });
 
       this._dequeue();
     });
-  };
+  }
 
   /**
    * Number of simultaneously running promises (which are resolving)
@@ -109,7 +107,7 @@ export default class Queue {
    */
   getPendingLength() {
     return this.pendingPromises;
-  };
+  }
 
   /**
    * Number of queued promises (which are waiting)
@@ -118,7 +116,7 @@ export default class Queue {
    */
   getQueueLength() {
     return this.queue.length;
-  };
+  }
 
   /**
    * @returns {boolean} true if first item removed from queue
@@ -136,9 +134,9 @@ export default class Queue {
         this.options.onEmpty();
       }
       return false;
-    } else {
+    }
 
-      try {
+    try {
         this.pendingPromises++;
 
         Queue._resolveWith(item.promiseGenerator())
@@ -149,14 +147,14 @@ export default class Queue {
             // It should pass values
             item.resolve(value);
             this._dequeue();
-          }, (err: Error) => {
+          },    (err: Error) => {
             // It is not pending now
             this.pendingPromises--;
             // It should not mask errors
             item.reject(err);
             this._dequeue();
           }
-            //,function (message) {
+            // ,function (message) {
             //   // It should pass notifications
             //   item.notify(message);
             // }
@@ -167,7 +165,6 @@ export default class Queue {
         this._dequeue();
 
       }
-    }
 
     return true;
   }
@@ -179,5 +176,5 @@ export default class Queue {
     return new Queue.LocalPromise(function (resolve) {
       resolve(value);
     });
-  };
+  }
 }
