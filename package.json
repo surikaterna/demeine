@@ -7,9 +7,8 @@
   "scripts": {
     "test": "mocha test/**/*.ts --require ts-node/register --recursive",
     "test.watch": "mocha --require ts-node/register --color --watch-extensions ts --watch test/**/*.ts",
-    "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --recursive test -u exports -R spec",
-    "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
-    "jscs": "jscs -p google ./lib ./test",
+    "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --require ts-node/register --recursive test -u exports -R spec",
+    "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --require ts-node/register --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
     "lint": "tslint -p tsconfig.json",
     "lint.fix": "tslint -p tsconfig.json --fix src/**/*.{ts,tsx} -t verbose"
   },
@@ -25,8 +24,9 @@
   "author": "Surikat AB",
   "license": "MIT",
   "devDependencies": {
+    "@types/bluebird": "^3.5.25",
+    "@types/uuid": "^3.4.4",
     "@types/mocha": "^5.2.6",
-    "istanbul": "^0.3.2",
     "mocha": "^6.0.2",
     "should": "^13.2.3",
     "slf-debug": "^0.2.0",
@@ -42,9 +42,6 @@
   },
   "homepage": "https://github.com/surikaterna/demeine",
   "dependencies": {
-    "@types/bluebird": "^3.5.25",
-    "@types/uuid": "^3.4.4",
-    "bluebird": "^3.5.3",
     "slf": "^1.x",
     "uuid": "^3.3.2"
   }

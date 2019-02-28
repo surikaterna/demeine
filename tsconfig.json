@@ -7,18 +7,20 @@
       "dom.iterable",
       "esnext"
     ],
-    "allowJs": true,
+    // "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "sourceMap": true,
+    "declaration": true,
     "forceConsistentCasingInFileNames": true,
     "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
+    // "isolatedModules": true,
+    // "noEmit": true,
+    "rootDir": "./",
     "outDir": "./dist/",
     "plugins": [
       {
@@ -27,6 +29,7 @@
     ]
   },
   "include": [
-    "./src/**/*"
+    "src",
+    "index.ts"
   ]
 }
