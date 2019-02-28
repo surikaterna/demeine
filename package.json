@@ -5,6 +5,8 @@
   "jshint": "^2.5.10",
   "main": "index.js",
   "scripts": {
+    "build": "tsc -p .",
+    "prepublishOnly"  : "npm run build",
     "test": "mocha test/**/*.ts --require ts-node/register --recursive",
     "test.watch": "mocha --require ts-node/register --color --watch-extensions ts --watch test/**/*.ts",
     "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --require ts-node/register --recursive test -u exports -R spec",
@@ -21,10 +23,10 @@
     "domain",
     "cqrs"
   ],
+  "files": ["dist/**/*"],
   "author": "Surikat AB",
   "license": "MIT",
   "devDependencies": {
-    "@types/bluebird": "^3.5.25",
     "@types/uuid": "^3.4.4",
     "@types/mocha": "^5.2.6",
     "mocha": "^6.0.2",
