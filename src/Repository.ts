@@ -29,8 +29,8 @@ interface Partition {
   openStream(id: string): Promise<Stream>;
   queryStream(id: string, fromVersion?: number): Promise<Commit[]>;
   queryStreamWithSnapshot?(id: string): Promise<StreamWithSnapshot>;
-  loadSnapshot?(id: string): Promise<Snapshot|undefined>;
-  storeSnapshot?(aggregateId: string, snapshot: object, version: number):void;
+  loadSnapshot?(id: string): Promise<Snapshot | undefined>;
+  storeSnapshot?(aggregateId: string, snapshot: object, version: number): void;
 }
 
 const LOG = require('slf').Logger.getLogger('demeine:repository');
@@ -68,11 +68,11 @@ export default class Repository {
         aggregate._rehydrate(events, version, snapshot && snapshot.snapshot);
         return aggregate;
       }).nodeify(callback);
-    }  if (this._partition.loadSnapshot !== undefined) {
+    } if (this._partition.loadSnapshot !== undefined) {
       return this._partition.loadSnapshot(id).then((snapshot) => {
-        return this._partition.queryStream(id, (snapshot && snapshot.version) || 0).then(function (commits) {
+        return this._partition.queryStream(id, (snapshot && snapshot.version) || 0).then((commits) => {
           let events: Event[] = [];
-          commits.forEach(function (commit) {
+          commits.forEach((commit) => {
             events = events.concat(commit.events);
           });
           const version = (snapshot && snapshot.version || 0) + events.length;
@@ -80,14 +80,14 @@ export default class Repository {
           return aggregate;
         });
       }).nodeify(callback);
-    } 
-      return this._partition.openStream(id).then(function (stream) {
-        const events = stream.getCommittedEvents();
-        const version = stream.getVersion();
-        aggregate._rehydrate(events, version);
-        return aggregate;
-      }).nodeify(callback);
-    
+    }
+    return this._partition.openStream(id).then((stream) => {
+      const events = stream.getCommittedEvents();
+      const version = stream.getVersion();
+      aggregate._rehydrate(events, version);
+      return aggregate;
+    }).nodeify(callback);
+
   }
 
   findEventsById(id: string, callback?: Function) {
@@ -98,7 +98,7 @@ export default class Repository {
     }).nodeify(callback);
   }
 
-  save(aggregate: Aggregate<any>, commitId?: string, callback?: Function) : Promise<Aggregate<any>> {
+  save(aggregate: Aggregate<any>, commitId?: string, callback?: Function): Promise<Aggregate<any>> {
     let savingWithId = commitId;
     const self = this;
     return this._partition.openStream(aggregate.id).then(function (stream) {
