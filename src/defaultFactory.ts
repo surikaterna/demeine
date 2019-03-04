@@ -6,8 +6,8 @@ class DefaultAggregate extends Aggregate<object> {
 
 const defaultFactory = function (aggregateType: string) {
   return function () {
-   return new DefaultAggregate();
- };
+    return new DefaultAggregate();
+  };
 };
 
 export default defaultFactory;

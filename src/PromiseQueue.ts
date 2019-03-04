@@ -137,9 +137,9 @@ export default class Queue {
     }
 
     try {
-        this.pendingPromises++;
+      this.pendingPromises++;
 
-        Queue._resolveWith(item.promiseGenerator())
+      Queue._resolveWith(item.promiseGenerator())
           // Forward all stuff
           .then((value: any) => {
             // It is not pending now
@@ -159,12 +159,12 @@ export default class Queue {
             //   item.notify(message);
             // }
           );
-      } catch (err) {
-        this.pendingPromises--;
-        item.reject(err);
-        this._dequeue();
+    } catch (err) {
+      this.pendingPromises--;
+      item.reject(err);
+      this._dequeue();
 
-      }
+    }
 
     return true;
   }

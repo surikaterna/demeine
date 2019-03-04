@@ -14,8 +14,8 @@ export default class DefaultCommandHandler implements CommandHandler {
     const funcName = 'process' + this._capitalize(key);
     const applier = aggregate[funcName];
     if (applier) {
-    return applier.bind(aggregate)(command);
-  }
+      return applier.bind(aggregate)(command);
+    }
     throw new Error('Unable to process command: ' + type + ' looking for: ' + funcName);
 
   }
@@ -34,8 +34,8 @@ export default class DefaultCommandHandler implements CommandHandler {
     const parts = type.split('.');
     const filteredParts = [];
     for (let i = 1; i < parts.length - 1; i++) {
-    filteredParts.push(parts[i]);
-  }
+      filteredParts.push(parts[i]);
+    }
     filteredParts.unshift(filteredParts.pop());
     return this._camelCase(filteredParts.join('_'));
   }
