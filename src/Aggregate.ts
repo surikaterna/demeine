@@ -30,10 +30,6 @@ export interface Command {
   payload: any;
 }
 
-interface AggregateX {
-  [key: string]: Function;
-}
-
 class DummySink<StateType> implements CommandSink {
   _aggregate: Aggregate<StateType>;
   constructor(aggregate: Aggregate<any>) {
