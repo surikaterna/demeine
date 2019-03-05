@@ -1,15 +1,18 @@
 {
   "name": "demeine",
-  "version": "0.3.7",
+  "version": "0.4.0",
   "description": "DDDD - Distributed Domain Driven Design",
+  "jshint": "^2.5.10",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test --recursive",
-    "test.watch": "mocha test --color --watch --recursive",
-    "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --recursive test -u exports -R spec",
-    "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
-    "jshint": "jshint ./lib",
-    "jscs": "jscs -p google ./lib ./test"
+    "build": "tsc -p .",
+    "prepublishOnly": "npm run build",
+    "test": "mocha test/**/*.ts --require ts-node/register --recursive",
+    "test.watch": "mocha --require ts-node/register --color --watch-extensions ts --watch test/**/*.ts",
+    "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --require ts-node/register --recursive test -u exports -R spec",
+    "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --require ts-node/register --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
+    "lint": "tslint -p tsconfig.json",
+    "lint.fix": "tslint -p tsconfig.json --fix src/**/*.{ts,tsx} -t verbose"
   },
   "repository": {
     "type": "git",
@@ -20,35 +23,30 @@
     "domain",
     "cqrs"
   ],
+  "files": [
+    "dist/**/*"
+  ],
   "author": "Surikat AB",
   "license": "MIT",
   "devDependencies": {
-    "istanbul": "^0.3.2",
-    "jscs": "^1.11.3",
-    "jshint": "^2.5.10",
-    "mocha": "^2.0.1",
-    "should": "^4.1.0",
+    "@types/uuid": "^3.4.4",
+    "@types/mocha": "^5.2.6",
+    "mocha": "^6.0.2",
+    "should": "^13.2.3",
     "slf-debug": "^0.2.0",
-    "babel-core": "^6.7.7",
-    "babel-preset-es2015": "^6.6.0"
+    "ts-mocha": "^6.0.0",
+    "ts-node": "^8.0.2",
+    "tslint": "^5.12.1",
+    "tslint-config-surikat": "^1.0.0",
+    "tslint-react": "^3.6.0",
+    "typescript": "^3.3.3333"
   },
   "bugs": {
     "url": "https://github.com/surikaterna/demeine/issues"
   },
   "homepage": "https://github.com/surikaterna/demeine",
   "dependencies": {
-    "bluebird": "^2.9.12",
     "slf": "^1.x",
-    "uuid": "^3.0.1"
-  },
-  "babel": {
-    "presets": [
-      "es2015"
-    ]
-  },
-  "browserify": {
-    "presets": [
-      "es2015"
-    ]
+    "uuid": "^3.3.2"
   }
 }

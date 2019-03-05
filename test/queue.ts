@@ -1,14 +1,15 @@
-var should = require('should');
-var Queue = require('../lib/queue');
+import Queue from '../src/Queue';
+import 'mocha';
+import 'should';
 
 describe('Queue', function () {
   describe('#queue', function () {
     it('Processes queue in order', function (done) {
       var queue = new Queue();
       var string = '';
-      var incrementString = function(i) {
-        return function() {
-          return string +=i ;
+      var incrementString = function (i:number) {
+        return function () {
+          return string += i;
         }
       };
       for (var i = 0; i < 10; i++) {
@@ -19,7 +20,7 @@ describe('Queue', function () {
       }).then(function (res) {
         string.should.eql('012345678910');
         done();
-      }).error(console.log);
+      }).catch(console.log);
     });
     it('should return promise that is resolved upon running complete', function (done) {
       var queue = new Queue();
