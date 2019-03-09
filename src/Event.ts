@@ -1,5 +1,5 @@
 export default interface Event {
-  id?: string;
+  id: string;
   type: string;
   aggregateId: string;
   payload: any;

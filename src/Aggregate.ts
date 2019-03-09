@@ -75,7 +75,7 @@ export default abstract class Aggregate<StateType> {
     return this._state;
   }
 
-  _apply(event: Event, isNew: boolean) {
+  _apply(event: Event, isNew: boolean = false) {
     LOG.debug('applying event %j %s', event, isNew);
 
     if (!event.id) {
@@ -125,12 +125,12 @@ export default abstract class Aggregate<StateType> {
       thenned = thenned
         .then((command: Command) => {
           if (!command.id) {
-            LOG.warn('No command id set, setting it automatiically');
+            LOG.warn('No command id set, setting it automatically');
             command.id = uuid();
           }
           // console.log(command.aggregateId + " || " + self.id);
           if (!command.type || !command.aggregateId || command.aggregateId != this.id) {
-            const error = new Error('command is missing data ' + JSON.stringify(command));
+            const error = new Error(`command is missing data ${JSON.stringify(command)}`);
             LOG.error('Unable to sink command %j', command);
             throw error;
           }
