@@ -1,6 +1,6 @@
 {
   "name": "demeine",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "DDDD - Distributed Domain Driven Design",
   "main": "index.js",
   "scripts": {
