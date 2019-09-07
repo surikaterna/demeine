@@ -183,9 +183,8 @@ describe('Repository', function () {
   it('removes and retries snapshot but does not end up in loop if not working', function (done) {
     var factory = function () { return new Location(); };
     var repo = new Repository(new SnapshotPartition({ id: '1', version: 1, snapshot: { no_name: 'hello' } }, [{ id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello' }, { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello, world' }]), 'location', factory);
-    repo.findById('1').then(function(aggregate) {
-      console.log('helvete', aggregate);
-      
+    repo.findById('1').then(function() {
+      done(new Error('should not fulfill'));
     }).catch(function () {
       done();
     });
