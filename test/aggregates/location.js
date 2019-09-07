@@ -11,6 +11,18 @@ var Location = function (commandSink, eventHandler) {
 util.inherits(Location, Aggregate);
 
 
+Location.prototype.registerName = function (newName) {
+  return this._sink({ type: 'location.register_name.command', payload: newName, aggregateId: 1 });
+};
+
+Location.prototype.processRegisterName = function (command) {
+  return this._apply({ type: 'location.registered_name.event', payload: command.payload, aggregateId: 1 }, true);
+};
+
+Location.prototype.applyRegisteredName = function (event) {
+  this._state.name = event.payload;
+};
+
 
 // --------- CHANGE NAME
 
@@ -24,6 +36,9 @@ Location.prototype.processChangeName = function (command) {
 
 Location.prototype.applyChangedName = function (event) {
   //change local state if necessary for validation
+  if (!this._state.name) {
+    throw new Error('Should have name in order to change it!')
+  }
   this._state.name = event.payload;
 };
 
