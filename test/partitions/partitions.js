@@ -16,6 +16,31 @@ var Partition = function () {
   }
 }
 
+var ConflictPartition = function () {
+  var mockVersion = 1;
+  this.openStream = function (streamId) {
+    var Stream = function () {
+      ++mockVersion;
+      var self = this;
+      this._version = mockVersion;
+      this.getCommittedEvents = function () {
+        return [{
+          type: 'location.registered_name.event',
+          payload: 'New Name committed',
+          aggregateId: 1,
+          id: 'c2d08471-2e0a-4c27-8557-64201f51f249'
+        }];
+      };
+      this.getVersion = function () {
+        return self._version;
+      }
+      this.append = function () { };
+      this.commit = function () { return Promise.resolve(null); };
+    }
+    return Promise.resolve(new Stream(streamId));
+  }
+}
+
 var SnapshotPartition = function (snapshot, events) {
   this._snapshot = snapshot;
   this.loadSnapshot = function () {
@@ -67,3 +92,4 @@ var SnapshotPartition = function (snapshot, events) {
 
 module.exports.Partition = Partition;
 module.exports.SnapshotPartition = SnapshotPartition;
+module.exports.ConflictPartition = ConflictPartition;
