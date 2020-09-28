@@ -3,6 +3,7 @@
 // require('debug').enable('*');
 var should = require('should');
 var SnapshotPartition = require('./partitions/partitions').SnapshotPartition;
+var ConflictPartition = require('./partitions/partitions').ConflictPartition;
 var Partition = require('./partitions/partitions').Partition;
 var Repository = require('..').Repository;
 
@@ -108,6 +109,75 @@ describe('Repository', function () {
           x.getUncommittedEvents().length.should.equal(0);
           done();
         });
+      }).catch(function (err) {
+        done(err);
+      });
+    });
+  });
+  describe('conflict strategy', function () {
+    it('should throw in conflictStrategy with committedEvents', function (done) {
+      var factory = function () { return new Location(); };
+      var conflictStrategyCalled = false;
+      var part = new ConflictPartition(1);
+      const conflictStrategy = function (nextEvents, committedEvents) {
+        nextEvents[0].payload.should.eql('New Name')
+        committedEvents[0].payload.should.eql('New Name committed')
+        conflictStrategyCalled = true;
+        return true; // throw..
+      };
+      var repo = new Repository(part, 'location', factory, conflictStrategy);
+      repo.findById('ID_THAT_DO_NOT_EXIST').then(function (location) {
+        location.registerName('New Name');
+        repo.save(location)
+          .catch(function () {
+            conflictStrategyCalled.should.eql(true);
+            done();
+          });
+      }).catch(function (err) {
+        done(err);
+      });
+    });
+    it('should throw in conflictStrategy without committedEvents', function (done) {
+      var factory = function () { return new Location(); };
+      var conflictStrategyCalled = false;
+      var part = new ConflictPartition(1);
+      const conflictStrategy = function (nextEvents) {
+        nextEvents[0].payload.should.eql('New Name')
+        conflictStrategyCalled = true;
+        return true; // throw..
+      };
+      var repo = new Repository(part, 'location', factory, conflictStrategy);
+      repo.findById('ID_THAT_DO_NOT_EXIST').then(function (location) {
+        location.registerName('New Name');
+        repo.save(location)
+          .catch(function () {
+            conflictStrategyCalled.should.eql(true);
+            done();
+          });
+      }).catch(function (err) {
+        done(err);
+      });
+    });
+    it('should not throw in conflictStrategy', function (done) {
+      var factory = function () { return new Location(); };
+      var conflictStrategyCalled = false;
+      var part = new ConflictPartition(1);
+      const conflictStrategy = function (nextEvents) {
+        nextEvents[0].payload.should.eql('New Name')
+        conflictStrategyCalled = true;
+        return false; // do not throw..
+      };
+      var repo = new Repository(part, 'location', factory, conflictStrategy);
+      repo.findById('ID_THAT_DO_NOT_EXIST').then(function (location) {
+        location.registerName('New Name');
+        repo.save(location)
+          .then(function () {
+            done();
+          })
+          .catch(function (e) {
+            conflictStrategyCalled.should.eql(true);
+            done(e)
+          });
       }).catch(function (err) {
         done(err);
       });
