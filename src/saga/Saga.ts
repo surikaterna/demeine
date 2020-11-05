@@ -1,3 +1,2 @@
-export default class Saga<T> {
-
-}
+// @ts-ignore
+export default class Saga<T> {}

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import Saga from './Saga';
 import Message from './Message';
 
@@ -7,7 +8,7 @@ interface SagaBinding {
 }
 
 interface SagaConstructor {
-  new () : Saga<any>;
+  new (): Saga<any>;
 }
 
 class SagaDefinition {
@@ -48,10 +49,10 @@ class SagaService {
   async onMessage(msg: Message) {
     const startSagas = this._registry.findSagaStarters(msg.type);
 
-    startSagas.forEach(async (def) => {
+    startSagas.forEach(async def => {
       // Is there an old instance;
       let sagaInstance = await this._loadSaga(def, msg);
-      if(!sagaInstance) {
+      if (!sagaInstance) {
         sagaInstance = def.sagaConstructor && new def.sagaConstructor();
       }
       const handler = def.startByEvents.find(binding => binding.eventName === msg.type);
@@ -59,12 +60,9 @@ class SagaService {
       if (handler !== undefined) {
         handler.eventHandler.call(sagaInstance, msg);
       }
-
     });
-
   }
   _loadSaga(sagaDeef: SagaDefinition, msg: Message): Promise<Saga<any> | undefined> {
-
     return Promise.resolve(undefined);
   }
 }
@@ -77,10 +75,10 @@ export default class SagaRegistry {
   }
 
   findSagaStarters(type: string) {
-    return this._sagaDefinitions.filter(def => def.startByEvents.findIndex((bnd => (bnd.eventName === type))) !== -1);
+    return this._sagaDefinitions.filter(def => def.startByEvents.findIndex(bnd => bnd.eventName === type) !== -1);
   }
 
   findSagaHandlers(type: string) {
-    return this._sagaDefinitions.filter(def => def.startByEvents.findIndex((bnd => (bnd.eventName === type))) !== -1);
+    return this._sagaDefinitions.filter(def => def.startByEvents.findIndex(bnd => bnd.eventName === type) !== -1);
   }
 }

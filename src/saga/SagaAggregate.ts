@@ -1,23 +1,20 @@
-import { Aggregate } from "..";
-import CommandSink from "../CommandSink";
-import EventHandler from "../EventHandler";
-import AggregateCommandHandler from "../CommandHandler";
-import { Command } from "../Aggregate";
-import Event from "../Event";
-import Message from "./Message";
-import uuid = require("uuid");
-import CommandHandler from "../CommandHandler";
+/* eslint-disable */
+import { Aggregate } from '..';
+import CommandSink from '../CommandSink';
+import EventHandler from '../EventHandler';
+import { Command } from '../Aggregate';
+import Event from '../Event';
+import Message from './Message';
+import { v4 as uuid } from 'uuid';
+import CommandHandler from '../CommandHandler';
 
 const LOG = require('slf').Logger.getLogger('demeine:saga');
 
 interface SagaAggregateState {
-  eventIds: string[]
+  eventIds: string[];
 }
 
-interface TimeDefinition {
-
-}
-
+interface TimeDefinition {}
 class RegisterIncomingEvent implements Command {
   type = 'saga.incoming_event.register';
   aggregateId = '12';
@@ -35,14 +32,15 @@ interface AggregateEventHandler<E extends Event, S> {
   applyEvent(state: S, event: E): S;
 }
 
-interface AggregateProcessor<S, C extends Command, E extends Event> extends AggregateCommandHandler<S, C, E>, AggregateEventHandler<E, S> {
-}
+interface AggregateProcessor<S, C extends Command, E extends Event> extends AggregateCommandHandler<S, C, E>, AggregateEventHandler<E, S> {}
 
 interface Entity<T> {
   id: T;
 }
 
-const CreateOnEvent = (type: string, id?: any): Function => { return () => { } };
+const CreateOnEvent = (type: string, id?: any): Function => {
+  return () => {};
+};
 
 // @CreateOnEvent('RegisterOrderLine', (event: any) => event.payload.id)
 class OrderLine implements Entity<string> {
@@ -67,11 +65,7 @@ class OrderState {
   lines: OrderLine[] = [];
 }
 
-class Order {
-
-}
-
-
+class Order {}
 
 class Chand implements AggregateProcessor<RegisterIncomingEvent, Event, any> {
   // @ForCommand('')
@@ -91,7 +85,6 @@ abstract class AggregateWithHandlers<S> extends Aggregate<S> {
     }
   */
 }
-
 
 export default class SagaAggregate extends Aggregate<SagaAggregateState> {
   _state: SagaAggregateState;
@@ -117,23 +110,16 @@ export default class SagaAggregate extends Aggregate<SagaAggregateState> {
     }
   }
 
-  outgoingCommand(command: Command) {
-
-  }
+  outgoingCommand(command: Command) {}
 
   //process
 
-  dispatchMessage(message: Message) {
-
-  }
+  dispatchMessage(message: Message) {}
 
   /*scheduleMessage(at: TimeDefinition, message: Message) {
 
   }
   */
 
-  timeout(at: TimeDefinition, handler: string, payload: object) {
-
-  }
-
+  timeout(at: TimeDefinition, handler: string, payload: object) {}
 }
