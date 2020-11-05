@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc -p .",
-    "prepublishOnly"  : "npm run build",
+    "prepublishOnly": "npm run build",
     "test": "mocha test/**/*.ts --require ts-node/register --recursive",
     "test.watch": "mocha --require ts-node/register --color --watch-extensions ts --watch test/**/*.ts",
     "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --require ts-node/register --recursive test -u exports -R spec",
@@ -23,7 +23,9 @@
     "domain",
     "cqrs"
   ],
-  "files": ["dist/**/*"],
+  "files": [
+    "dist/**/*"
+  ],
   "author": "Surikat AB",
   "license": "MIT",
   "devDependencies": {
