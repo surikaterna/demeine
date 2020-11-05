@@ -11,7 +11,7 @@ export default class Queue extends EventEmitter {
   _maxConcurrent: number;
   _maxQueue: number = Infinity;
   _queue: PromiseQueue;
-  constructor(_jobTimeout: number | undefined, options: QueueOptions = { concurrency: 1 }) {
+  constructor(_jobTimeout?: number | undefined, options: QueueOptions = { concurrency: 1 }) {
     super();
     this._maxConcurrent = options.concurrency;
     this._queue = new PromiseQueue(this._maxConcurrent, this._maxQueue, {
