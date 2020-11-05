@@ -4,7 +4,7 @@ class DefaultAggregate extends Aggregate<object> {
   _state: object = {};
 }
 
-const defaultFactory = function (aggregateType: string) {
+const defaultFactory = function () {
   return function () {
     return new DefaultAggregate();
   };

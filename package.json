@@ -1,52 +1,63 @@
 {
-  "name": "demeine",
-  "version": "0.4.0",
-  "description": "DDDD - Distributed Domain Driven Design",
-  "jshint": "^2.5.10",
-  "main": "index.js",
-  "scripts": {
-    "build": "tsc -p .",
-    "prepublishOnly": "npm run build",
-    "test": "mocha test/**/*.ts --require ts-node/register --recursive",
-    "test.watch": "mocha --require ts-node/register --color --watch-extensions ts --watch test/**/*.ts",
-    "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --require ts-node/register --recursive test -u exports -R spec",
-    "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --require ts-node/register --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
-    "lint": "tslint -p tsconfig.json",
-    "lint.fix": "tslint -p tsconfig.json --fix src/**/*.{ts,tsx} -t verbose"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/surikaterna/demeine.git"
-  },
-  "keywords": [
-    "dddd",
-    "domain",
-    "cqrs"
-  ],
-  "files": [
-    "dist/**/*"
-  ],
-  "author": "Surikat AB",
+  "version": "0.1.0",
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "start": "tsdx watch",
+    "build": "tsdx build",
+    "test": "tsdx test",
+    "lint": "tsdx lint",
+    "prepare": "tsdx build",
+    "test.watch": "tsdx test --watchAll",
+    "size": "size-limit",
+    "analyze": "size-limit --why"
+  },
+  "peerDependencies": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsdx lint"
+    }
+  },
+  "prettier": {
+    "printWidth": 160,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "name": "demeine",
+  "author": "Thomas Bruun",
+  "module": "dist/demeine.esm.js",
+  "size-limit": [
+    {
+      "path": "dist/demeine.cjs.production.min.js",
+      "limit": "10 KB"
+    },
+    {
+      "path": "dist/demeine.esm.js",
+      "limit": "10 KB"
+    }
+  ],
   "devDependencies": {
-    "@types/uuid": "^3.4.4",
-    "@types/mocha": "^5.2.6",
-    "mocha": "^6.0.2",
-    "should": "^13.2.3",
+    "@babel/preset-typescript": "^7.12.1",
+    "@size-limit/preset-small-lib": "^4.7.0",
+    "@types/uuid": "^8.3.0",
+    "husky": "^4.3.0",
+    "size-limit": "^4.7.0",
     "slf-debug": "^0.2.0",
-    "ts-mocha": "^6.0.0",
-    "ts-node": "^8.0.2",
-    "tslint": "^5.12.1",
-    "tslint-config-surikat": "^1.0.0",
-    "tslint-react": "^3.6.0",
-    "typescript": "^3.3.3333"
+    "tsdx": "^0.14.1",
+    "tslib": "^2.0.3",
+    "typescript": "^4.0.5"
   },
-  "bugs": {
-    "url": "https://github.com/surikaterna/demeine/issues"
-  },
-  "homepage": "https://github.com/surikaterna/demeine",
   "dependencies": {
     "slf": "^1.x",
-    "uuid": "^3.3.2"
+    "uuid": "^8.3.1"
   }
 }

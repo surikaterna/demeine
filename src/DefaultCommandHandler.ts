@@ -16,18 +16,21 @@ export default class DefaultCommandHandler implements CommandHandler {
     if (applier) {
       return applier.bind(aggregate)(command);
     }
-    throw new Error('Unable to process command: ' + type + ' looking for: ' + funcName);
-
+    throw new Error(
+      'Unable to process command: ' + type + ' looking for: ' + funcName
+    );
   }
 
-	// implementation of lodash 3.x _.capitalize
+  // implementation of lodash 3.x _.capitalize
   _capitalize(str: string) {
-    return str && (str.charAt(0).toUpperCase() + str.slice(1));
+    return str && str.charAt(0).toUpperCase() + str.slice(1);
   }
 
-	// imitation of lodash 3.x _.camelCase. Removes underscores and uppercases the next letter
+  // imitation of lodash 3.x _.camelCase. Removes underscores and uppercases the next letter
   _camelCase(str: string) {
-    return str.replace(/_([a-z])/g, function (g) { return g[1].toUpperCase(); });
+    return str.replace(/_([a-z])/g, function(g) {
+      return g[1].toUpperCase();
+    });
   }
 
   _extractKey(type: string) {
