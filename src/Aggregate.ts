@@ -80,7 +80,7 @@ export default abstract class Aggregate<StateType> {
     if (!event.id) {
       event.id = uuid();
     }
-    if (!event.type || !event.aggregateId || event.aggregateId != this.id) {
+    if (!event.type || !event.aggregateId || event.aggregateId !== this.id) {
       LOG.error('event is missing data %j', event);
       throw new Error(`event is missing data ${JSON.stringify(event)}`);
     }
@@ -127,7 +127,7 @@ export default abstract class Aggregate<StateType> {
           command.id = uuid();
         }
         // console.log(command.aggregateId + " || " + self.id);
-        if (!command.type || !command.aggregateId || command.aggregateId != this.id) {
+        if (!command.type || !command.aggregateId || command.aggregateId !== this.id) {
           const error = new Error('command is missing data ' + JSON.stringify(command));
           LOG.error('Unable to sink command %j', command);
           throw error;
