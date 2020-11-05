@@ -15,16 +15,17 @@ export default class DefaultEventHandler implements EventHandler {
       return applier.bind(aggregate)(event);
     }
     throw new Error('Unable to apply event ' + type + ' || ' + funcName);
-
   }
 
   _capitalize(str: string) {
-    return str && (str.charAt(0).toUpperCase() + str.slice(1));
+    return str && str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   // imitation of lodash 3.x _.camelCase. Removes underscores and uppercases the next letter
   _camelCase(str: string) {
-    return str.replace(/_([a-z])/g, function (g) { return g[1].toUpperCase(); });
+    return str.replace(/_([a-z])/g, function(g) {
+      return g[1].toUpperCase();
+    });
   }
 
   _extractKey(type: string) {
