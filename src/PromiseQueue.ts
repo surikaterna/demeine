@@ -1,9 +1,9 @@
 /*
-*  Copied from branch https://github.com/adjohnson916/promise-queue/blob/on-empty/lib/index.js
-*  in order to get onEmpty functionality.
-*
-* AK: Changed to TypeScript 2019-02-26
-*/
+ *  Copied from branch https://github.com/adjohnson916/promise-queue/blob/on-empty/lib/index.js
+ *  in order to get onEmpty functionality.
+ *
+ * AK: Changed to TypeScript 2019-02-26
+ */
 
 /**
 
@@ -40,20 +40,20 @@ interface QueueItem {
  * var queue = new Queue(1);
  *
  * queue.add(function () {
-   *     // resolve of this promise will resume next request
-   *     return downloadTarballFromGithub(url, file);
-   * })
+ *     // resolve of this promise will resume next request
+ *     return downloadTarballFromGithub(url, file);
+ * })
  * .then(function (file) {
-   *     doStuffWith(file);
-   * });
+ *     doStuffWith(file);
+ * });
  *
  * queue.add(function () {
-   *     return downloadTarballFromGithub(url, file);
-   * })
+ *     return downloadTarballFromGithub(url, file);
+ * })
  * // This request will be paused
  * .then(function (file) {
-   *     doStuffWith(file);
-   * });
+ *     doStuffWith(file);
+ * });
  */
 export default class Queue {
   static LocalPromise: PromiseConstructor = Promise;
@@ -92,7 +92,7 @@ export default class Queue {
       this.queue.push({
         promiseGenerator,
         resolve,
-        reject
+        reject,
         // notify: notify || noop
       });
 
@@ -140,30 +140,31 @@ export default class Queue {
       this.pendingPromises++;
 
       Queue._resolveWith(item.promiseGenerator())
-          // Forward all stuff
-          .then((value: any) => {
+        // Forward all stuff
+        .then(
+          (value: any) => {
             // It is not pending now
             this.pendingPromises--;
             // It should pass values
             item.resolve(value);
             this._dequeue();
-          },    (err: Error) => {
+          },
+          (err: Error) => {
             // It is not pending now
             this.pendingPromises--;
             // It should not mask errors
             item.reject(err);
             this._dequeue();
           }
-            // ,function (message) {
-            //   // It should pass notifications
-            //   item.notify(message);
-            // }
-          );
+          // ,function (message) {
+          //   // It should pass notifications
+          //   item.notify(message);
+          // }
+        );
     } catch (err) {
       this.pendingPromises--;
       item.reject(err);
       this._dequeue();
-
     }
 
     return true;
@@ -173,7 +174,7 @@ export default class Queue {
       return value;
     }
 
-    return new Queue.LocalPromise(function (resolve) {
+    return new Queue.LocalPromise(function(resolve) {
       resolve(value);
     });
   }

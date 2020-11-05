@@ -1,8 +1,5 @@
-import util from 'util';
 import Queue from './Queue';
-// import Promise from 'bluebird';
 import { v4 as uuid } from 'uuid';
-
 import Event from './Event';
 import EventHandler from './EventHandler';
 import CommandHandler from './CommandHandler';
@@ -32,9 +29,11 @@ export interface Command {
 
 class DummySink<StateType> implements CommandSink {
   _aggregate: Aggregate<StateType>;
+
   constructor(aggregate: Aggregate<any>) {
     this._aggregate = aggregate;
   }
+
   sink(command: Command) {
     return this._aggregate._process(command);
   }
@@ -59,7 +58,7 @@ export default abstract class Aggregate<StateType> {
     this._commandHandler = commandHandler || new DefaultCommandHandler();
   }
 
-  _rehydrate(events: any[], version: number, snapshot: StateType) {
+  _rehydrate(events: any[], version: number, snapshot?: StateType) {
     LOG.info('rehydrating aggregate with %d events to version %d has snapshot %s', events.length, version, snapshot !== undefined);
     // do another way?
     if (snapshot) {
@@ -81,6 +80,7 @@ export default abstract class Aggregate<StateType> {
     if (!event.id) {
       event.id = uuid();
     }
+    // eslint-disable-next-line
     if (!event.type || !event.aggregateId || event.aggregateId != this.id) {
       LOG.error('event is missing data %j', event);
       throw new Error(`event is missing data ${JSON.stringify(event)}`);
@@ -122,24 +122,24 @@ export default abstract class Aggregate<StateType> {
     LOG.info('sinking command %j', commandToSink);
     return this._commandQueue.queueCommand(() => {
       let thenned = Promise.resolve(commandToSink);
-      thenned = thenned
-        .then((command: Command) => {
-          if (!command.id) {
-            LOG.warn('No command id set, setting it automatically');
-            command.id = uuid();
-          }
-          // console.log(command.aggregateId + " || " + self.id);
-          if (!command.type || !command.aggregateId || command.aggregateId != this.id) {
-            const error = new Error(`command is missing data ${JSON.stringify(command)}`);
-            LOG.error('Unable to sink command %j', command);
-            throw error;
-          }
-          if (this.type) {
-            command.aggregateType = this.type;
-          }
-          const result = this._commandSink.sink(command, this);
-          return makePromise(result, 'sinking command but not returning promise, commands status and chaining might not work as expected');
-        });
+      thenned = thenned.then((command: Command) => {
+        if (!command.id) {
+          LOG.warn('No command id set, setting it automatiically');
+          command.id = uuid();
+        }
+        // console.log(command.aggregateId + " || " + self.id);
+        // eslint-disable-next-line
+        if (!command.type || !command.aggregateId || command.aggregateId != this.id) {
+          const error = new Error('command is missing data ' + JSON.stringify(command));
+          LOG.error('Unable to sink command %j', command);
+          throw error;
+        }
+        if (this.type) {
+          command.aggregateType = this.type;
+        }
+        const result = this._commandSink.sink(command, this);
+        return makePromise(result, 'sinking command but not returning promise, commands status and chaining might not work as expected');
+      });
       // console.log('thenn', thenned);
       return thenned;
     });
@@ -168,6 +168,6 @@ export default abstract class Aggregate<StateType> {
 
   clearUncommittedEvents() {
     LOG.info('Clearing uncommitted events');
-    return this._uncommittedEvents = [];
+    return (this._uncommittedEvents = []);
   }
 }
