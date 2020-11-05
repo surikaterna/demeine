@@ -245,10 +245,7 @@ export default class Repository {
                 return aggregate;
               })
               .catch(e => {
-                LOG.debug(
-                  'Unable to save commmit id: ' + savingWithId + ' for type: ' + this._aggregateType + ', with ' + uncommittedEvents.length + ' events.',
-                  e
-                );
+                LOG.debug('Unable to save commmit id: ' + savingWithId + ' for type: ' + this._aggregateType + ', with ' + uncommittedEvents.length + ' events.', e);
                 throw e;
               });
           });

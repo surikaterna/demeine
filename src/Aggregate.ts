@@ -51,11 +51,7 @@ export default abstract class Aggregate<StateType> {
   _commandQueue: Queue = new Queue();
   abstract _state: StateType;
 
-  constructor(
-    commandSink?: CommandSink,
-    eventHandler?: EventHandler,
-    commandHandler?: CommandHandler
-  ) {
+  constructor(commandSink?: CommandSink, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
     this._uncommittedEvents = [];
     this._commandSink = commandSink || new DummySink(this);
     this._eventHandler = eventHandler || new DefaultEventHandler();
@@ -63,12 +59,7 @@ export default abstract class Aggregate<StateType> {
   }
 
   _rehydrate(events: any[], version: number, snapshot?: StateType) {
-    LOG.info(
-      'rehydrating aggregate with %d events to version %d has snapshot %s',
-      events.length,
-      version,
-      snapshot !== undefined
-    );
+    LOG.info('rehydrating aggregate with %d events to version %d has snapshot %s', events.length, version, snapshot !== undefined);
     // do another way?
     if (snapshot) {
       this._state = snapshot;
@@ -136,14 +127,8 @@ export default abstract class Aggregate<StateType> {
           command.id = uuid();
         }
         // console.log(command.aggregateId + " || " + self.id);
-        if (
-          !command.type ||
-          !command.aggregateId ||
-          command.aggregateId != this.id
-        ) {
-          const error = new Error(
-            'command is missing data ' + JSON.stringify(command)
-          );
+        if (!command.type || !command.aggregateId || command.aggregateId != this.id) {
+          const error = new Error('command is missing data ' + JSON.stringify(command));
           LOG.error('Unable to sink command %j', command);
           throw error;
         }
@@ -151,10 +136,7 @@ export default abstract class Aggregate<StateType> {
           command.aggregateType = this.type;
         }
         const result = this._commandSink.sink(command, this);
-        return makePromise(
-          result,
-          'sinking command but not returning promise, commands status and chaining might not work as expected'
-        );
+        return makePromise(result, 'sinking command but not returning promise, commands status and chaining might not work as expected');
       });
       // console.log('thenn', thenned);
       return thenned;
@@ -168,9 +150,7 @@ export default abstract class Aggregate<StateType> {
   getUncommittedEvents(): Event[] {
     // throw if async cmd is on queue
     if (this._commandQueue.isProcessing()) {
-      throw new Error(
-        'Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()'
-      );
+      throw new Error('Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()');
     }
     return this._uncommittedEvents;
   }

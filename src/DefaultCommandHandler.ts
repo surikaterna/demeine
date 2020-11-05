@@ -16,9 +16,7 @@ export default class DefaultCommandHandler implements CommandHandler {
     if (applier) {
       return applier.bind(aggregate)(command);
     }
-    throw new Error(
-      'Unable to process command: ' + type + ' looking for: ' + funcName
-    );
+    throw new Error('Unable to process command: ' + type + ' looking for: ' + funcName);
   }
 
   // implementation of lodash 3.x _.capitalize

@@ -62,11 +62,7 @@ export default class Queue {
   maxPendingPromises: number = Infinity;
   maxQueuedPromises: number = Infinity;
   queue: QueueItem[] = [];
-  constructor(
-    maxPendingPromises: number,
-    maxQueuedPromises: number,
-    options: QueueOptions
-  ) {
+  constructor(maxPendingPromises: number, maxQueuedPromises: number, options: QueueOptions) {
     this.options = options = options || {};
     this.maxPendingPromises = maxPendingPromises || Infinity;
     this.maxQueuedPromises = maxQueuedPromises || Infinity;

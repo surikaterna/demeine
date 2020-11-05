@@ -94,11 +94,7 @@ describe('Repository', function() {
       var factory = function() {
         return new Location();
       };
-      var repo = new Repository(
-        new SnapshotPartition(undefined, [{ id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: 'Hello' }]),
-        'location',
-        factory
-      );
+      var repo = new Repository(new SnapshotPartition(undefined, [{ id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: 'Hello' }]), 'location', factory);
       repo
         .findById('1')
         .then(function(aggregate) {
@@ -117,9 +113,7 @@ describe('Repository', function() {
       var factory = function() {
         return new Location();
       };
-      var part = new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
-        { id: 1, type: 'location.registered_name.event', payload: 'Hello' },
-      ]);
+      var part = new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [{ id: 1, type: 'location.registered_name.event', payload: 'Hello' }]);
       var repo = new Repository(part, 'location', factory);
       repo
         .findById('1')
