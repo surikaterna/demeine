@@ -74,7 +74,7 @@ export default abstract class Aggregate<StateType> {
     return this._state;
   }
 
-  _apply(event: Event, isNew: boolean) {
+  _apply(event: Event, isNew: boolean = false) {
     LOG.debug('applying event %j %s', event, isNew);
 
     if (!event.id) {
