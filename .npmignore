@@ -3,3 +3,6 @@ test/
 **/*.spec.js
 jest.config.js
 tsconfig.json
+.idea
+.vscode
+jest-setup.ts

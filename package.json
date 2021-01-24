@@ -11,7 +11,8 @@
     "compile.watch": "tsc --watch",
     "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --recursive test -u exports -R spec",
     "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prepare": "npm run compile"
   },
   "repository": {
     "type": "git",
