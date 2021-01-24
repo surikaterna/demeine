@@ -1,10 +1,11 @@
 import { Event } from '@surikat/core-domain';
 import { Location, LocationState } from '../../test/aggregates/Location';
 import { ConflictPartition, Partition, SnapshotPartition } from '../../test/partitions';
+import { AggregateFactory } from './defaultFactoryCreator';
 import { ConcurrencyStrategy, Repository, Snapshot } from './Repository';
 
 describe('Repository', () => {
-  const locationFactory: () => Location = () => new Location();
+  const locationFactory: AggregateFactory<Location> = () => new Location();
 
   describe('#findById', () => {
     it('returns aggregate with version = -1 if new stream', async (done) => {
@@ -122,8 +123,7 @@ describe('Repository', () => {
         } as Event<unknown>
       ];
 
-      // TODO: Fix issue with incompatible states, or unnecessary since it's just test data?
-      const partition = new SnapshotPartition((undefined as unknown) as Snapshot<LocationState>, events);
+      const partition = new SnapshotPartition(undefined, events);
       const repository = new Repository(partition, 'location', locationFactory);
 
       try {
@@ -162,9 +162,7 @@ describe('Repository', () => {
 
       try {
         const aggregate = await repository.findById('1');
-        // TODO: Fix repository to return proper aggregate instead of aggregate with <State>
-        // Should not need to cast
-        (aggregate as Location).changeName('Hello, World!');
+        aggregate.changeName('Hello, World!');
         await repository.save(aggregate);
         const snapshot = await partition.loadSnapshot('1');
 
@@ -182,8 +180,7 @@ describe('Repository', () => {
 
       try {
         const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
-        // TODO: Fix in Repository
-        await (location as Location).registerName('New Name');
+        await location.registerName('New Name');
         const savedLocation = await repository.save(location);
         expect(savedLocation.getUncommittedEvents().length).toBe(0);
         done();
@@ -216,7 +213,7 @@ describe('Repository', () => {
       const repository = new Repository(partition, 'location', locationFactory, conflictStrategy);
 
       try {
-        const location = (await repository.findById('ID_THAT_DO_NOT_EXIST')) as Location;
+        const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
         location.registerName('New Name');
 
         try {
@@ -253,7 +250,7 @@ describe('Repository', () => {
       const repository = new Repository(partition, 'location', locationFactory, conflictStrategy);
 
       try {
-        const location = (await repository.findById('ID_THAT_DO_NOT_EXIST')) as Location;
+        const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
         location.registerName('New Name');
 
         try {
@@ -290,7 +287,7 @@ describe('Repository', () => {
       const repository = new Repository(partition, 'location', locationFactory, conflictStrategy);
 
       try {
-        const location = (await repository.findById('ID_THAT_DO_NOT_EXIST')) as Location;
+        const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
         location.registerName('New Name');
 
         try {
@@ -375,8 +372,7 @@ describe('Repository', () => {
     const repository = new Repository(partition, 'location', locationFactory);
 
     try {
-      // TODO: Should not need to cast
-      const aggregate = (await repository.findById('1')) as Location;
+      const aggregate = await repository.findById('1');
       expect(aggregate.getSnapshot().name).toBe('Hello, world');
       expect(aggregate.getVersion()).toBe(2);
 

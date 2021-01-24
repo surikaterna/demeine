@@ -8,5 +8,10 @@ module.exports = {
   },
   testRegex: '(./test/*|(\\.|/)(test|spec))\\.ts$',
   moduleDirectories: ['node_modules', 'src'],
-  moduleFileExtensions: ['ts', 'js', 'json', 'node']
+  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
+  globals: {
+    'ts-jest': {
+      isolatedModules: true
+    }
+  }
 };

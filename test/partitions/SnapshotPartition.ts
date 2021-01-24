@@ -4,7 +4,7 @@ import Stream from './Stream';
 
 export class SnapshotPartition<State extends BaseState = BaseState> implements RepositoryPartition<State> {
   private events: Array<Event<unknown>>;
-  private snapshot: Snapshot<State>;
+  private snapshot?: Snapshot<State>;
 
   constructor(snapshot: Snapshot<State> | undefined, events: Array<Event<unknown>>) {
     this.snapshot = snapshot as Snapshot<State>;

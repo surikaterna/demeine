@@ -2,7 +2,7 @@ import { Event } from '@surikat/core-domain';
 import { LoggerFactory } from 'slf';
 import { v4 as uuid } from 'uuid';
 import Aggregate, { BaseState } from './Aggregate';
-import { defaultFactory } from './defaultFactory';
+import { AggregateFactory, defaultFactoryCreator } from './defaultFactoryCreator';
 
 const LOG = LoggerFactory.getLogger('demeine:repository');
 
@@ -56,11 +56,10 @@ export interface Stream<Types = unknown> {
   getVersion(): number;
 }
 
-// export class Repository<State extends BaseState = BaseState> {
-export class Repository<StoredAggregate extends Aggregate, State extends BaseState = StoredAggregate['_state']> {
+export class Repository<SpecializedAggregate extends Aggregate = Aggregate<BaseState>, State extends BaseState = SpecializedAggregate['_state']> {
   private readonly aggregateType: string;
   private readonly concurrencyStrategy?: ConcurrencyStrategy;
-  private readonly factory: (aggregateType: string) => Aggregate<State>;
+  private readonly factory: AggregateFactory<SpecializedAggregate>;
   private readonly optimizeWrites: boolean;
   private readonly partition: Partition<State>;
   private readonly resetSnapshotOnFail: boolean;
@@ -68,12 +67,12 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
   constructor(
     partition: Partition<State>,
     aggregateType: string,
-    factory?: (aggregateType: string) => Aggregate<State>,
+    factory?: AggregateFactory<SpecializedAggregate>,
     concurrencyStrategy?: ConcurrencyStrategy,
     options: RepositoryOptions = {}
   ) {
     this.partition = partition;
-    this.factory = factory ?? defaultFactory<State>(aggregateType);
+    this.factory = factory ?? (defaultFactoryCreator(aggregateType) as AggregateFactory<SpecializedAggregate>); // TODO: How to handle optional type?
     this.aggregateType = aggregateType;
     this.concurrencyStrategy = concurrencyStrategy;
 
@@ -82,7 +81,7 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
   }
 
   checkConcurrencyStrategy = async <Events = unknown>(
-    aggregate: Aggregate<State>,
+    aggregate: SpecializedAggregate,
     stream: Stream,
     uncommittedEvents: Array<Event<Events>>
   ): Promise<boolean> => {
@@ -112,7 +111,7 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
     return shouldThrow;
   };
 
-  findById = async (id: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
+  findById = async (id: string, callback?: Callback<SpecializedAggregate>): Promise<SpecializedAggregate> => {
     LOG.info('%s findById(%s)', this.aggregateType, id);
 
     if (this.partition.queryStreamWithSnapshot !== undefined) {
@@ -141,7 +140,7 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
     return events;
   };
 
-  save = async (aggregate: Aggregate<State>, commitId?: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
+  save = async (aggregate: SpecializedAggregate, commitId?: string, callback?: Callback<SpecializedAggregate>): Promise<SpecializedAggregate> => {
     const stream = await this.partition.openStream(aggregate.id, this.optimizeWrites);
     const uncommittedEvents = await aggregate.getUncommittedEventsAsync();
 
@@ -149,7 +148,7 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
     const startStreamVersion = stream._version;
     const shouldThrow = await this.checkConcurrencyStrategy(aggregate, stream, uncommittedEvents);
 
-    if (shouldThrow === true) {
+    if (shouldThrow) {
       throw new Error('Concurrency error. Version mismatch on stream');
     }
 
@@ -196,7 +195,7 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
     }
   };
 
-  private findByQueryStreamWithSnapshot = async (id: string, isRetry: boolean, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
+  private findByQueryStreamWithSnapshot = async (id: string, isRetry: boolean, callback?: Callback<SpecializedAggregate>): Promise<SpecializedAggregate> => {
     LOG.info('%s findByQueryStreamWithSnapshot(%s)', this.aggregateType, id);
 
     const aggregate = this.factory(id);
@@ -225,7 +224,7 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
     return aggregate;
   };
 
-  private findBySnapshot = async (id: string, isRetry: boolean, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
+  private findBySnapshot = async (id: string, isRetry: boolean, callback?: Callback<SpecializedAggregate>): Promise<SpecializedAggregate> => {
     LOG.info('%s findBySnapshot(%s)', this.aggregateType, id);
 
     const aggregate = this.factory(id);

@@ -2,10 +2,13 @@
   "name": "demeine",
   "version": "1.0.0",
   "description": "DDDD - Distributed Domain Driven Design",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "test": "jest",
     "test.watch": "jest --watch",
+    "compile": "tsc",
+    "compile.watch": "tsc --watch",
     "coverage": "istanbul cover node_modules/mocha/bin/_mocha -- --recursive test -u exports -R spec",
     "coverage-start": "istanbul cover node_modules/mocha/bin/_mocha test --recursive -- -u exports -R spec && start coverage/lcov-report/index.html",
     "lint": "eslint"
