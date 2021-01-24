@@ -2,7 +2,7 @@ import { Command, Event } from '@surikat/core-domain';
 import { Aggregate, BaseState, CommandSink } from '../../src/aggregate';
 import { EventHandler } from '../../src/handlers';
 
-interface LocationState extends BaseState {
+export interface LocationState extends BaseState {
   name: string;
 }
 

@@ -73,7 +73,7 @@ export class Aggregate<State extends BaseState = BaseState> {
       : this.getUncommittedEvents();
   };
 
-  getSnapshot = () => this._state;
+  getSnapshot = (): State => this._state;
 
   _apply: ApplyFunc<State> = <Payload = unknown>(event: Event<Payload>, isNew = false): Aggregate<State> => {
     LOG.debug('applying event %j %b', event, isNew);

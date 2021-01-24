@@ -6,36 +6,35 @@ import { defaultFactory } from './defaultFactory';
 
 const LOG = LoggerFactory.getLogger('demeine:repository');
 
-interface Callback<Result = unknown> {
+export interface Callback<Result = unknown> {
   (error: null, result: Result): void;
   (error: Error): void;
 }
 
-interface Commit<Events = unknown> {
+export interface Commit<Events = unknown> {
   id: string;
   partitionId: string;
   streamId: string;
-  events: Event<Events>;
+  events: Array<Event<Events>>;
   commitSequence: number;
   isDispatched: string;
 }
 
-interface ConcurrencyStrategy {
-  (events: Array<Event<unknown>>, streamEvents?: Array<Event<unknown>>): boolean;
+export interface ConcurrencyStrategy {
+  <Types = unknown>(events: Array<Event<Types>>, streamEvents?: Array<Event<Types>>): boolean;
 }
 
-interface RepositoryOptions {
+export interface RepositoryOptions {
   resetSnapshotOnFail?: boolean;
 }
 
 export interface Partition<State extends BaseState = BaseState> {
-  findBySnapshot(): void;
   openStream(id: string, writeOnly?: boolean): Promise<Stream>;
-  queryStream<Events = unknown>(id: string, version?: number): Promise<Array<Commit<Events>>>;
+  queryStream<Events = unknown>(id: string, version?: number, callback?: Callback): Promise<Array<Commit<Events>>>;
   loadSnapshot?(id: string): Promise<Snapshot<State> | undefined>;
   queryStreamWithSnapshot?(id: string): Promise<SnapshotStream<State>>;
-  removeSnapshot?(id: string): Promise<void>;
-  storeSnapshot?(id: string, snapshot: Snapshot<State>, version: number): Promise<void>;
+  removeSnapshot?(id: string): Promise<Snapshot<State>>;
+  storeSnapshot?(id: string, snapshot: Snapshot<State>, version: number): Promise<Snapshot<State>>;
 }
 
 export interface Snapshot<State extends BaseState = BaseState> {
@@ -57,19 +56,20 @@ export interface Stream {
   getVersion(): number;
 }
 
-export class Repository<State extends BaseState = BaseState> {
-  private readonly partition: Partition<State>;
+// export class Repository<State extends BaseState = BaseState> {
+export class Repository<StoredAggregate extends Aggregate, State extends BaseState = StoredAggregate['_state']> {
   private readonly aggregateType: string;
+  private readonly concurrencyStrategy?: ConcurrencyStrategy;
   private readonly factory: (aggregateType: string) => Aggregate<State>;
-  private readonly concurrencyStrategy: ConcurrencyStrategy;
-  private readonly resetSnapshotOnFail: boolean;
   private readonly optimizeWrites: boolean;
+  private readonly partition: Partition<State>;
+  private readonly resetSnapshotOnFail: boolean;
 
   constructor(
     partition: Partition<State>,
     aggregateType: string,
-    factory: (aggregateType: string) => Aggregate<State>,
-    concurrencyStrategy: ConcurrencyStrategy,
+    factory?: (aggregateType: string) => Aggregate<State>,
+    concurrencyStrategy?: ConcurrencyStrategy,
     options: RepositoryOptions = {}
   ) {
     this.partition = partition;
@@ -79,6 +79,37 @@ export class Repository<State extends BaseState = BaseState> {
 
     this.resetSnapshotOnFail = options.resetSnapshotOnFail ?? true;
     this.optimizeWrites = options.resetSnapshotOnFail ?? true; // leaving this option true will not read the entire stream, at the cost of not being able to supply all committed events to the concurrencyStrategy.
+  }
+
+  checkConcurrencyStrategy = async <Events = unknown>(
+    aggregate: Aggregate<State>,
+    stream: Stream,
+    uncommittedEvents: Array<Event<Events>>
+  ): Promise<boolean> => {
+    const isNewStream = stream._version === -1;
+    let shouldThrow = false;
+
+    if (isNewStream || !this.concurrencyStrategy) {
+      return shouldThrow;
+    }
+
+    const numberOfEvents = uncommittedEvents.length;
+    const nextStreamVersion = stream._version + numberOfEvents;
+
+    if (!(nextStreamVersion > aggregate._version)) {
+      return shouldThrow;
+    }
+
+    const writeOnly = this.concurrencyStrategy?.length < 2 ?? true;
+
+    if (writeOnly) {
+      this.concurrencyStrategy?.(uncommittedEvents);
+      return shouldThrow;
+    }
+
+    const newStream = await this.partition.openStream(aggregate.id, false);
+    shouldThrow = this.concurrencyStrategy(uncommittedEvents, newStream.getCommittedEvents());
+    return shouldThrow;
   }
 
   findById = async (id: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
@@ -111,7 +142,7 @@ export class Repository<State extends BaseState = BaseState> {
   };
 
   save = async (aggregate: Aggregate<State>, commitId?: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
-    const writeOnly = this.concurrencyStrategy?.length < 2 ?? true;
+    const writeOnly = this.concurrencyStrategy ? this.concurrencyStrategy.length < 2 : true;
     const stream = await this.partition.openStream(aggregate.id, this.optimizeWrites);
     const events = await aggregate.getUncommittedEventsAsync();
 

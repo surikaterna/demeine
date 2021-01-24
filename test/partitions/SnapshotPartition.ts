@@ -1,45 +1,37 @@
 import { Event } from '@surikat/core-domain';
-import { Snapshot } from '../../src/aggregate/Repository';
+import { BaseState, Callback, Commit, Partition as RepositoryPartition, Snapshot } from '../../src/aggregate';
+import Stream from './Stream';
 
-export class SnapshotPartition {
-  private events: Event<unknown>[];
-  private snapshot: Snapshot;
+export class SnapshotPartition<State extends BaseState = BaseState> implements RepositoryPartition<State> {
+  private events: Array<Event<unknown>>;
+  private snapshot: Snapshot<State>;
 
-  constructor(snapshot: Snapshot, events: Event<unknown>[]) {
-    this.snapshot = snapshot;
+  constructor(snapshot: Snapshot<State> | undefined, events: Array<Event<unknown>>) {
+    this.snapshot = snapshot as Snapshot<State>;
     this.events = events;
   }
 
+  loadSnapshot = (_id: string): Promise<Snapshot<State> | undefined> => Promise.resolve(this.snapshot);
+
   openStream = (streamId: string) => {
-    class Stream {
-      constructor(_streamId: string) {
-      }
-
-      append = (): void => {
-      };
-      commit = (): Promise<null> => Promise.resolve(null);
-      getCommittedEvents = (): Array<unknown> => [];
-      getVersion = (): number => -1;
-    }
-
     return Promise.resolve(new Stream(streamId));
   };
 
-  storeSnapshot = (id: string, snapshot: Snapshot, version: number): Promise<Snapshot> => {
+  storeSnapshot = (id: string, snapshot: State, version: number): Promise<Snapshot<State>> => {
     this.snapshot = { id, snapshot, version };
     return Promise.resolve(this.snapshot);
   };
 
-  removeSnapshot = (id: string): Promise<Snapshot> => {
+  removeSnapshot = (id: string): Promise<Snapshot<State>> => {
     this.snapshot = { id, version: -1 };
     return Promise.resolve(this.snapshot);
   };
 
-  queryStream = (id, fromEventSequence, callback): Promise<{ events: Event<unknown>[] }[]> => {
-    let result = [{ events: this.events }];
+  queryStream = <Events = unknown>(_id: string, fromEventSequence?: number, callback?: Callback): Promise<Array<Commit<Events>>> => {
+    let result = ([{ events: this.events }] as unknown) as Array<Commit<Events>>;
 
-    if (fromEventSequence < 1) {
-      callback(null, result);
+    if (!fromEventSequence || fromEventSequence < 1) {
+      callback?.(null, result);
       return Promise.resolve(result);
     }
 
@@ -62,7 +54,7 @@ export class SnapshotPartition {
       result[0].events = result[0].events.slice(result[0].events.length - tooMany);
     }
 
-    callback(null, result);
+    callback?.(null, result);
     return Promise.resolve(result);
   };
 }
