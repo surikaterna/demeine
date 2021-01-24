@@ -1,7 +1,7 @@
 import { Event } from '@surikat/core-domain';
 import { Location, LocationState } from '../../test/aggregates/Location';
-import { Partition, SnapshotPartition } from '../../test/partitions';
-import { Repository, Snapshot } from './Repository';
+import { ConflictPartition, Partition, SnapshotPartition } from '../../test/partitions';
+import { ConcurrencyStrategy, Repository, Snapshot } from './Repository';
 
 describe('Repository', () => {
   const locationFactory: () => Location = () => new Location();
@@ -123,10 +123,7 @@ describe('Repository', () => {
       ];
 
       // TODO: Fix issue with incompatible states, or unnecessary since it's just test data?
-      const partition = new SnapshotPartition(
-        undefined as unknown as Snapshot<LocationState>,
-        events
-      );
+      const partition = new SnapshotPartition((undefined as unknown) as Snapshot<LocationState>, events);
       const repository = new Repository(partition, 'location', locationFactory);
 
       try {
@@ -167,11 +164,11 @@ describe('Repository', () => {
         const aggregate = await repository.findById('1');
         // TODO: Fix repository to return proper aggregate instead of aggregate with <State>
         // Should not need to cast
-        (aggregate as Location).changeName('Hello, World!')
+        (aggregate as Location).changeName('Hello, World!');
         await repository.save(aggregate);
-        const snapshot = await partition.loadSnapshot('1')
+        const snapshot = await partition.loadSnapshot('1');
 
-        expect(snapshot?.snapshot?.name).toBe('Hello, World!')
+        expect(snapshot?.snapshot?.name).toBe('Hello, World!');
         done();
       } catch (error) {
         done(error);
@@ -186,23 +183,206 @@ describe('Repository', () => {
       try {
         const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
         // TODO: Fix in Repository
-        await (location as Location).registerName('New Name')
+        await (location as Location).registerName('New Name');
         const savedLocation = await repository.save(location);
         expect(savedLocation.getUncommittedEvents().length).toBe(0);
         done();
       } catch (error) {
         done(error);
       }
-
     });
   });
 
   describe('conflict strategy', () => {
-    it.todo('save should clear uncommitted events');
-    it.todo('should throw in conflictStrategy without committedEvents');
-    it.todo('should not throw in conflictStrategy');
+    it('should throw in conflictStrategy with committedEvents', async (done) => {
+      const conflictPartitionEvents: Array<Event<unknown>> = [
+        {
+          id: 'c2d08471-2e0a-4c27-8557-64201f51f249',
+          aggregateId: '1',
+          type: 'location.registered_name.event',
+          payload: 'New Name committed'
+        } as Event<unknown>
+      ];
+      let conflictStrategyCalled = false;
+      const partition = new ConflictPartition<LocationState>(1, conflictPartitionEvents);
+
+      const conflictStrategy: ConcurrencyStrategy = (nextEvents, committedEvents): boolean => {
+        expect(nextEvents[0].payload).toBe('New Name');
+        expect(committedEvents?.[0].payload).toBe('New Name committed');
+        conflictStrategyCalled = true;
+        return true; // throw
+      };
+
+      const repository = new Repository(partition, 'location', locationFactory, conflictStrategy);
+
+      try {
+        const location = (await repository.findById('ID_THAT_DO_NOT_EXIST')) as Location;
+        location.registerName('New Name');
+
+        try {
+          await repository.save(location);
+          done(new Error('should not reach'));
+        } catch (error) {
+          expect(conflictStrategyCalled).toBe(true);
+          done();
+        }
+      } catch (error) {
+        done(error);
+      }
+    });
+
+    it('should throw in conflictStrategy without committedEvents', async (done) => {
+      const conflictPartitionEvents: Array<Event<unknown>> = [
+        {
+          id: 'c2d08471-2e0a-4c27-8557-64201f51f249',
+          aggregateId: '1',
+          type: 'location.registered_name.event',
+          payload: 'New Name committed'
+        } as Event<unknown>
+      ];
+
+      let conflictStrategyCalled = false;
+      const partition = new ConflictPartition<LocationState>(1, conflictPartitionEvents);
+
+      const conflictStrategy: ConcurrencyStrategy = (nextEvents): boolean => {
+        expect(nextEvents[0].payload).toBe('New Name');
+        conflictStrategyCalled = true;
+        return true; // throw
+      };
+
+      const repository = new Repository(partition, 'location', locationFactory, conflictStrategy);
+
+      try {
+        const location = (await repository.findById('ID_THAT_DO_NOT_EXIST')) as Location;
+        location.registerName('New Name');
+
+        try {
+          await repository.save(location);
+          done(new Error('should not reach'));
+        } catch (error) {
+          expect(conflictStrategyCalled).toBe(true);
+          done();
+        }
+      } catch (error) {
+        done(error);
+      }
+    });
+
+    it('should not throw in conflictStrategy', async (done) => {
+      const conflictPartitionEvents: Array<Event<unknown>> = [
+        {
+          id: 'c2d08471-2e0a-4c27-8557-64201f51f249',
+          aggregateId: '1',
+          type: 'location.registered_name.event',
+          payload: 'New Name committed'
+        } as Event<unknown>
+      ];
+
+      let conflictStrategyCalled = false;
+      const partition = new ConflictPartition<LocationState>(1, conflictPartitionEvents);
+
+      const conflictStrategy: ConcurrencyStrategy = (nextEvents): boolean => {
+        expect(nextEvents[0].payload).toBe('New Name');
+        conflictStrategyCalled = true;
+        return false; // do not throw
+      };
+
+      const repository = new Repository(partition, 'location', locationFactory, conflictStrategy);
+
+      try {
+        const location = (await repository.findById('ID_THAT_DO_NOT_EXIST')) as Location;
+        location.registerName('New Name');
+
+        try {
+          await repository.save(location);
+          done();
+        } catch (error) {
+          expect(conflictStrategyCalled).toBe(true);
+          done(error);
+        }
+      } catch (error) {
+        done(error);
+      }
+    });
   });
 
-  it.todo('removes and retries snapshot but does not end up in loop if not working');
-  it.todo('removes and retries snapshot create when snapshot is broken');
+  it('removes and retries snapshot but does not end up in loop if not working', async (done) => {
+    const initialSnapshot = ({
+      id: '1',
+      version: 1,
+      snapshot: {
+        id: '1',
+        no_name: 'hello'
+      }
+    } as unknown) as Snapshot<LocationState>;
+    const events: Array<Event<unknown>> = [
+      {
+        id: '1',
+        aggregateId: '1',
+        type: 'location.changed_name.event',
+        payload: 'Hello'
+      } as Event<unknown>,
+      {
+        id: '2',
+        aggregateId: '1',
+        type: 'location.changed_name.event',
+        payload: 'Hello, world'
+      } as Event<unknown>
+    ];
+
+    const partition = new SnapshotPartition(initialSnapshot, events);
+    const repository = new Repository(partition, 'location', locationFactory);
+
+    try {
+      await repository.findById('1');
+      done(new Error('should not fulfill'));
+    } catch (error) {
+      done();
+    }
+  });
+
+  it('removes and retries snapshot create when snapshot is broken', async (done) => {
+    const initialSnapshot = ({
+      id: '1',
+      version: 1,
+      snapshot: {
+        id: '1',
+        no_name: 'hello'
+      }
+    } as unknown) as Snapshot<LocationState>;
+    const events: Array<Event<unknown>> = [
+      {
+        id: '1',
+        aggregateId: '1',
+        type: 'location.registered_name.event',
+        payload: 'Hello'
+      } as Event<unknown>,
+      {
+        id: '1',
+        aggregateId: '1',
+        type: 'location.changed_name.event',
+        payload: 'Hello'
+      } as Event<unknown>,
+      {
+        id: '2',
+        aggregateId: '1',
+        type: 'location.changed_name.event',
+        payload: 'Hello, world'
+      } as Event<unknown>
+    ];
+
+    const partition = new SnapshotPartition(initialSnapshot, events);
+    const repository = new Repository(partition, 'location', locationFactory);
+
+    try {
+      // TODO: Should not need to cast
+      const aggregate = (await repository.findById('1')) as Location;
+      expect(aggregate.getSnapshot().name).toBe('Hello, world');
+      expect(aggregate.getVersion()).toBe(2);
+
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
 });

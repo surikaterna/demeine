@@ -28,9 +28,9 @@ export interface RepositoryOptions {
   resetSnapshotOnFail?: boolean;
 }
 
-export interface Partition<State extends BaseState = BaseState> {
-  openStream(id: string, writeOnly?: boolean): Promise<Stream>;
-  queryStream<Events = unknown>(id: string, version?: number, callback?: Callback): Promise<Array<Commit<Events>>>;
+export interface Partition<State extends BaseState = BaseState, Events = unknown> {
+  openStream(id: string, writeOnly?: boolean): Promise<Stream<Events>>;
+  queryStream(id: string, version?: number, callback?: Callback): Promise<Array<Commit<Events>>>;
   loadSnapshot?(id: string): Promise<Snapshot<State> | undefined>;
   queryStreamWithSnapshot?(id: string): Promise<SnapshotStream<State>>;
   removeSnapshot?(id: string): Promise<Snapshot<State>>;
@@ -48,11 +48,11 @@ export interface SnapshotStream<State extends BaseState = BaseState> {
   snapshot?: Snapshot<State>;
 }
 
-export interface Stream {
+export interface Stream<Types = unknown> {
   _version: number;
-  append(event: Event<unknown>): void;
-  commit(id: string): void;
-  getCommittedEvents<Types = unknown>(): Array<Event<Types>>;
+  append(event: Event<Types>): void;
+  commit(id: string): Promise<void>;
+  getCommittedEvents(): Array<Event<Types>>;
   getVersion(): number;
 }
 
@@ -103,14 +103,14 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
     const writeOnly = this.concurrencyStrategy?.length < 2 ?? true;
 
     if (writeOnly) {
-      this.concurrencyStrategy?.(uncommittedEvents);
+      shouldThrow = this.concurrencyStrategy?.(uncommittedEvents);
       return shouldThrow;
     }
 
     const newStream = await this.partition.openStream(aggregate.id, false);
     shouldThrow = this.concurrencyStrategy(uncommittedEvents, newStream.getCommittedEvents());
     return shouldThrow;
-  }
+  };
 
   findById = async (id: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
     LOG.info('%s findById(%s)', this.aggregateType, id);
@@ -131,63 +131,46 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
     return aggregate;
   };
 
-  findEventsById = async <Events = unknown>(id: string, callback?: Callback<Array<Event<Events>>>): Promise<Array<Event<Events>>> => {
+  findEventsById = async (id: string, callback?: Callback<Array<Event<unknown>>>): Promise<Array<Event<unknown>>> => {
     LOG.info('%s findEventsById(%s)', this.aggregateType, id);
 
     const stream = await this.partition.openStream(id);
-    const events = stream.getCommittedEvents<Events>();
+    const events = stream.getCommittedEvents();
 
     callback?.(null, events);
     return events;
   };
 
   save = async (aggregate: Aggregate<State>, commitId?: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> => {
-    const writeOnly = this.concurrencyStrategy ? this.concurrencyStrategy.length < 2 : true;
     const stream = await this.partition.openStream(aggregate.id, this.optimizeWrites);
-    const events = await aggregate.getUncommittedEventsAsync();
+    const uncommittedEvents = await aggregate.getUncommittedEventsAsync();
 
-    const startAggregateVersion = aggregate.getVersion() - events.length;
+    const startAggregateVersion = aggregate.getVersion() - uncommittedEvents.length;
     const startStreamVersion = stream._version;
+    const shouldThrow = await this.checkConcurrencyStrategy(aggregate, stream, uncommittedEvents);
 
-    // check if there is a conflict with event version /sequence
-    const isNewStream = stream._version === -1;
-
-    if (!isNewStream && this.concurrencyStrategy) {
-      const numberOfEvents = events.length;
-      const nextStreamVersion = stream._version + numberOfEvents;
-
-      if (nextStreamVersion > aggregate._version) {
-        // if so ask concurrency strategy if still ok or if it needs to throw
-        const shouldThrow = writeOnly
-          ? this.concurrencyStrategy(events)
-          : this.concurrencyStrategy(events, stream.getCommittedEvents());
-
-        if (shouldThrow === true) {
-          throw new Error('Concurrency error. Version mismatch on stream');
-        }
-      }
+    if (shouldThrow === true) {
+      throw new Error('Concurrency error. Version mismatch on stream');
     }
 
     aggregate.clearUncommittedEvents();
+    const savingWithId = commitId ?? uuid();
 
-    events.forEach((event) => {
+    uncommittedEvents.forEach((event) => {
       LOG.debug('%s append event - %s', this.aggregateType, event.id);
       stream.append(event);
     });
 
-    const savingWithId = commitId ?? uuid();
-
     try {
       await stream.commit(savingWithId);
-
-      LOG.info('Aggregate: %s committed %d events with id: %s', this.aggregateType, events.length, savingWithId);
+      LOG.info('Aggregate: %s committed %d events with id: %s', this.aggregateType, uncommittedEvents.length, savingWithId);
 
       if (this.partition.storeSnapshot !== undefined && aggregate.getSnapshot) {
-        LOG.debug('Persisting snapshot for stream %s version %d', aggregate.id, aggregate.getVersion());
+        LOG.debug('Persisting snapshot for stream %s version %s', aggregate.id, aggregate.getVersion());
 
         if (startStreamVersion > startAggregateVersion) {
           LOG.warn(
-            'IGNORING SNAPSHOT STORE. VERSION MISMATCH MIGHT LEAD TO SNAPSHOT FAILURE. for stream %s version %d - start stream version: %d - start aggregate version: %d',
+            'IGNORING SNAPSHOT STORE. VERSION MISMATCH MIGHT LEAD TO SNAPSHOT FAILURE. for stream %s version %s - start stream version: %s - start aggregate version: %s',
             aggregate.id,
             aggregate.getVersion(),
             startStreamVersion,
@@ -195,21 +178,20 @@ export class Repository<StoredAggregate extends Aggregate, State extends BaseSta
           );
         } else {
           LOG.debug(
-            'Persisting snapshot for stream %s version %d - start stream version: %d - start aggregate version: %d',
+            'Persisting snapshot for stream %s version %s - start stream version: %s - start aggregate version: %s',
             aggregate.id,
             aggregate.getVersion(),
             startStreamVersion,
             startAggregateVersion
           );
-
           this.partition.storeSnapshot(aggregate.id, aggregate.getSnapshot(), aggregate.getVersion());
         }
       }
 
+      callback?.(null, aggregate);
       return aggregate;
     } catch (error) {
-      LOG.debug('Unable to save commit id: %s for type %s, with %d events.', savingWithId, this.aggregateType, events.length);
-      callback?.(error);
+      LOG.debug('Unable to save commit id: ' + savingWithId + ' for type: ' + this.aggregateType + ', with ' + uncommittedEvents.length + ' events.', error);
       throw error;
     }
   };
