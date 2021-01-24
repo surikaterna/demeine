@@ -1,5 +1,5 @@
 import { Command } from '@surikat/core-domain';
-import { Aggregate, BaseState, ProcessFunc } from 'aggregate';
+import { Aggregate, BaseState, ProcessFunc } from '../aggregate';
 
 export interface CommandHandler {
   handle<State extends BaseState = BaseState, Payload = unknown>(aggregate: Aggregate<State>, command: Command<Payload>): ReturnType<ProcessFunc<State>>;

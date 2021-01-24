@@ -1,7 +1,7 @@
 import { Command, Event } from '@surikat/core-domain';
-import { CommandHandler, DefaultCommandHandler, DefaultEventHandler, EventHandler } from 'handlers';
 import { LoggerFactory } from 'slf';
 import { v4 as uuid } from 'uuid';
+import { CommandHandler, DefaultCommandHandler, DefaultEventHandler, EventHandler } from '../handlers';
 import { Queue } from '../queue';
 
 const LOG = LoggerFactory.getLogger('demeine:aggregate');
@@ -15,8 +15,8 @@ export interface BaseState {
 }
 
 export type CommandSink<State extends BaseState = BaseState> = {
-  sink<Payload = unknown>(command: Command<Payload>, aggregate: Aggregate<State>): Promise<Promise<Aggregate<State>>>
-}
+  sink<Payload = unknown>(command: Command<Payload>, aggregate: Aggregate<State>): Promise<Promise<Aggregate<State>>>;
+};
 
 export interface ProcessFunc<State extends BaseState = BaseState> {
   <Payload>(command: Command<Payload>): Promise<Promise<Aggregate<State>>>;
@@ -35,8 +35,7 @@ export class Aggregate<State extends BaseState = BaseState> {
   private version: number;
   private uncommittedEvents: Array<Event<unknown>>;
 
-  constructor(commandSink?: CommandSink<State>, eventHandler?: EventHandler,
-    commandHandler?: CommandHandler) {
+  constructor(commandSink?: CommandSink<State>, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
     this.uncommittedEvents = [];
 
     this.commandSink = commandSink ?? {
@@ -52,15 +51,14 @@ export class Aggregate<State extends BaseState = BaseState> {
 
   clearUncommittedEvents = (): Array<Event<unknown>> => {
     LOG.info('Clearing uncommitted events');
-    return this.uncommittedEvents = [];
+    return (this.uncommittedEvents = []);
   };
 
   getVersion = (): number => this.version;
 
   getUncommittedEvents = (): Array<Event<unknown>> => {
     if (this.commandQueue.isProcessing()) {
-      throw new Error(
-        'Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()');
+      throw new Error('Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()');
     }
 
     return this.uncommittedEvents;
@@ -68,9 +66,7 @@ export class Aggregate<State extends BaseState = BaseState> {
 
   getUncommittedEventsAsync = async (): Promise<Array<Event<unknown>>> => {
     await this.commandQueue.empty();
-    return this.commandQueue.isProcessing()
-      ? this.getUncommittedEventsAsync()
-      : this.getUncommittedEvents();
+    return this.commandQueue.isProcessing() ? this.getUncommittedEventsAsync() : this.getUncommittedEvents();
   };
 
   getSnapshot = (): State => this._state;
@@ -117,12 +113,7 @@ export class Aggregate<State extends BaseState = BaseState> {
   };
 
   _rehydrate = (events: Array<Event<unknown>>, version: number, snapshot?: State) => {
-    LOG.info(
-      'rehydrating aggregate with %d events to version %d has snapshot %b',
-      events.length,
-      version,
-      snapshot !== undefined
-    );
+    LOG.info('rehydrating aggregate with %d events to version %d has snapshot %b', events.length, version, snapshot !== undefined);
 
     if (snapshot) {
       this._state = snapshot;
@@ -138,28 +129,27 @@ export class Aggregate<State extends BaseState = BaseState> {
   _sink = <Payload = unknown>(commandToSink: Command<Payload> | Promise<Command<Payload>>) => {
     LOG.info('sinking command %j', commandToSink);
 
-    return this.commandQueue.queueCommand(() => Promise.resolve(commandToSink).then(async (command) => {
-      if (!command.id) {
-        LOG.warn('No command id set, setting it automatically');
-        command.id = uuid();
-      }
+    return this.commandQueue.queueCommand(() =>
+      Promise.resolve(commandToSink).then(async (command) => {
+        if (!command.id) {
+          LOG.warn('No command id set, setting it automatically');
+          command.id = uuid();
+        }
 
-      if (!command.type || !command.aggregateId || command.aggregateId !== this.id) {
-        const error = new Error(`command is missing data ${JSON.stringify(command)}`);
-        LOG.error('Unable to sink command %j', error);
-        throw error;
-      }
+        if (!command.type || !command.aggregateId || command.aggregateId !== this.id) {
+          const error = new Error(`command is missing data ${JSON.stringify(command)}`);
+          LOG.error('Unable to sink command %j', error);
+          throw error;
+        }
 
-      if (this.type) {
-        command.aggregateType = this.type;
-      }
+        if (this.type) {
+          command.aggregateType = this.type;
+        }
 
-      const result = await this.commandSink.sink(command, this);
-      return promise(
-        result,
-        'sinking command but not returning promise, commands status and chaining might not work as expected'
-      );
-    }));
+        const result = await this.commandSink.sink(command, this);
+        return promise(result, 'sinking command but not returning promise, commands status and chaining might not work as expected');
+      })
+    );
   };
 }
 

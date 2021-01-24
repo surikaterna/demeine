@@ -1,5 +1,5 @@
 import { Event } from '@surikat/core-domain';
-import { Aggregate, ApplyFunc, BaseState } from 'aggregate';
+import { Aggregate, ApplyFunc, BaseState } from '../aggregate';
 
 export interface EventHandler {
   handle<State extends BaseState = BaseState, Payload = unknown>(aggregate: Aggregate<State>, event: Event<Payload>): ReturnType<ApplyFunc<State>>;
