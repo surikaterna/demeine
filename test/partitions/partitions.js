@@ -14,6 +14,8 @@ var Partition = function () {
     }
     return Promise.resolve(new Stream(streamId));
   }
+  this.delete = function(streamId, event) {
+  }
 }
 
 var ConflictPartition = function () {

@@ -99,6 +99,22 @@ describe('Repository', function () {
       });;
     });
   });
+  it.only('should allow delete', function (done) {
+    var factory = function () { return new Location(); };
+    var repo = new Repository(new Partition(), 'location', factory);    
+    repo.findById('ID_THAT_DO_NOT_EXIST').then(function (location) {
+      location.registerName('New Name');
+      repo.save(location).then(function (x) {
+        location.delete();
+        return repo.save(location);
+      }).then(function() {
+        
+      });
+    }).catch(function (err) {
+      done(err);
+    });
+
+  });    
   describe('#save', function () {
     it('save should clear uncommitted events ', function (done) {
       var factory = function () { return new Location(); };
