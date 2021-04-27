@@ -141,7 +141,7 @@ describe('Repository', function () {
         });
     });
   });
-  it.only('should allow delete', function (done) {
+  it('should allow delete', function (done) {
     var factory = function () {
       return new Location();
     };
