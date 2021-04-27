@@ -20,9 +20,12 @@
     "domain",
     "cqrs"
   ],
+  "prettier": "prettier-config-surikaterna",
   "author": "Surikat AB",
   "license": "MIT",
   "devDependencies": {
+    "prettier": "^2.1.2",
+    "prettier-config-surikaterna": "^1.0.1",
     "istanbul": "^0.3.2",
     "jscs": "^1.11.3",
     "jshint": "^2.5.10",
