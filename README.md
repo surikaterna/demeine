@@ -4,8 +4,9 @@ DDDD - Distributed Domain Drive Design
 
 # Upgrade Guide
 
-- [ ] Replace Mocha & Should with Jest
-- [ ] Upgrade ESLint and Babel dependencies
+- [x] Replace Mocha & Should with Jest
+- [x] Upgrade Babel dependency
+- [ ] Upgrade code style dependencies
 - [ ] Add TypeScript support
 - [ ] Convert fully to TypeScript
     - [ ] Convert JS files to TS

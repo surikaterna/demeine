@@ -1,11 +1,7 @@
-// var sdebug = require('slf-debug').default;
-// require('slf').LoggerFactory.setFactory(sdebug);
-// require('debug').enable('*');
-var should = require('should');
 var SnapshotPartition = require('./partitions/partitions').SnapshotPartition;
 var ConflictPartition = require('./partitions/partitions').ConflictPartition;
 var Partition = require('./partitions/partitions').Partition;
-var Repository = require('..').Repository;
+var Repository = require('../src').Repository;
 
 var Location = require('./aggregates/location');
 
@@ -16,7 +12,7 @@ describe('Repository', function () {
       repo
         .findById('ID_THAT_DO_NOT_EXIST')
         .then(function (aggregate) {
-          aggregate.getVersion().should.equal(-1);
+          expect(aggregate.getVersion()).toBe(-1);
           done();
         })
         .catch(function (err) {
@@ -56,8 +52,8 @@ describe('Repository', function () {
         .findById('1')
         .then(function (aggregate) {
           if (aggregate instanceof Location) {
-            aggregate._getSnapshot().name.should.equal('hello');
-            aggregate.getVersion().should.equal(1);
+            expect(aggregate._getSnapshot().name).toBe('hello');
+            expect(aggregate.getVersion()).toBe(1);
             done();
           } else {
             done('Wrong type created');
@@ -83,8 +79,8 @@ describe('Repository', function () {
         .findById('1')
         .then(function (aggregate) {
           if (aggregate instanceof Location) {
-            aggregate._getSnapshot().name.should.equal('Hello, world');
-            aggregate.getVersion().should.equal(2);
+            expect(aggregate._getSnapshot().name).toBe('Hello, world');
+            expect(aggregate.getVersion()).toBe(2);
             done();
           } else {
             done('Wrong type created');
@@ -107,7 +103,7 @@ describe('Repository', function () {
         .findById('1')
         .then(function (aggregate) {
           if (aggregate instanceof Location) {
-            aggregate._getSnapshot().name.should.equal('Hello');
+            expect(aggregate._getSnapshot().name).toBe('Hello');
             done();
           } else {
             done('Wrong type created');
@@ -131,7 +127,7 @@ describe('Repository', function () {
           aggregate.changeName('Hello, World!');
           repo.save(aggregate).then(function () {
             part.loadSnapshot('1').then(function (snapshot) {
-              snapshot.snapshot.name.should.equal('Hello, World!');
+              expect(snapshot.snapshot.name).toBe('Hello, World!');
               done();
             });
           });
@@ -173,7 +169,7 @@ describe('Repository', function () {
         .then(function (location) {
           location.registerName('New Name');
           repo.save(location).then(function (x) {
-            x.getUncommittedEvents().length.should.equal(0);
+            expect(x.getUncommittedEvents()).toHaveLength(0);
             done();
           });
         })
@@ -190,8 +186,8 @@ describe('Repository', function () {
       var conflictStrategyCalled = false;
       var part = new ConflictPartition(1);
       const conflictStrategy = function (nextEvents, committedEvents) {
-        nextEvents[0].payload.should.eql('New Name');
-        committedEvents[0].payload.should.eql('New Name committed');
+        expect(nextEvents[0].payload).toBe('New Name');
+        expect(committedEvents[0].payload).toBe('New Name committed');
         conflictStrategyCalled = true;
         return true; // throw..
       };
@@ -201,7 +197,7 @@ describe('Repository', function () {
         .then(function (location) {
           location.registerName('New Name');
           repo.save(location).catch(function () {
-            conflictStrategyCalled.should.eql(true);
+            expect(conflictStrategyCalled).toBe(true);
             done();
           });
         })
@@ -216,7 +212,7 @@ describe('Repository', function () {
       var conflictStrategyCalled = false;
       var part = new ConflictPartition(1);
       const conflictStrategy = function (nextEvents) {
-        nextEvents[0].payload.should.eql('New Name');
+        expect(nextEvents[0].payload).toBe('New Name');
         conflictStrategyCalled = true;
         return true; // throw..
       };
@@ -226,7 +222,7 @@ describe('Repository', function () {
         .then(function (location) {
           location.registerName('New Name');
           repo.save(location).catch(function () {
-            conflictStrategyCalled.should.eql(true);
+            expect(conflictStrategyCalled).toBe(true);
             done();
           });
         })
@@ -241,7 +237,7 @@ describe('Repository', function () {
       var conflictStrategyCalled = false;
       var part = new ConflictPartition(1);
       const conflictStrategy = function (nextEvents) {
-        nextEvents[0].payload.should.eql('New Name');
+        expect(nextEvents[0].payload).toBe('New Name');
         conflictStrategyCalled = true;
         return false; // do not throw..
       };
@@ -256,7 +252,7 @@ describe('Repository', function () {
               done();
             })
             .catch(function (e) {
-              conflictStrategyCalled.should.eql(true);
+              expect(conflictStrategyCalled).toBe(true);
               done(e);
             });
         })
@@ -303,8 +299,8 @@ describe('Repository', function () {
       .findById('1')
       .then(function (aggregate) {
         if (aggregate instanceof Location) {
-          aggregate._getSnapshot().name.should.equal('Hello, world');
-          aggregate.getVersion().should.equal(2);
+          expect(aggregate._getSnapshot().name).toBe('Hello, world');
+          expect(aggregate.getVersion()).toBe(2);
           done();
         } else {
           done('Wrong type created');

@@ -1,5 +1,5 @@
 var util = require('util');
-var Aggregate = require('../..').Aggregate;
+var Aggregate = require('../../src').Aggregate;
 var Promise = require('bluebird');
 
 var Location = function (commandSink, eventHandler) {

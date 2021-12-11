@@ -1,8 +1,6 @@
 var Promise = require('bluebird');
 var sdebug = require('slf-debug').default;
 require('slf').LoggerFactory.setFactory(sdebug);
-//require('debug').enable('*');
-var should = require('should');
 
 var Location = require('./aggregates/location');
 
@@ -12,7 +10,7 @@ describe('Aggregate', function () {
       var loc = new Location();
       loc.registerName('test');
       loc.getUncommittedEventsAsync().then(function (res) {
-        res.length.should.equal(1);
+        expect(res).toHaveLength(1);
       })
     });
   });
@@ -24,17 +22,17 @@ describe('Aggregate', function () {
       loc.registerName('SECOND-CHANGE');
       loc.changeNameAsync('THIRD-CHANGE');
 
-      should.throws(function () {
+      expect(function () {
         // Should throw if trying to get uncommitted events while still processing
         loc.getUncommittedEvents();
-      });
+      }).toThrow();
 
       loc.getUncommittedEventsAsync().then(function (res) {
-        res[0].payload.should.equal('Initial Name');
-        res[1].payload.should.equal('FIRST-CHANGE');
-        res[2].payload.should.equal('SECOND-CHANGE');
-        res[3].payload.should.equal('THIRD-CHANGE');
-        res.length.should.equal(4);
+        expect(res[0].payload).toBe('Initial Name');
+        expect(res[1].payload).toBe('FIRST-CHANGE');
+        expect(res[2].payload).toBe('SECOND-CHANGE');
+        expect(res[3].payload).toBe('THIRD-CHANGE');
+        expect(res).toHaveLength(4);
         done();
       })
     });
@@ -54,7 +52,7 @@ describe('Aggregate', function () {
         })
         .error(function (e) {
           loc.getUncommittedEventsAsync().then(function (res) {
-            res.length.should.equal(0);
+            expect(res).toHaveLength(0);
             done();
           });
         });
@@ -67,7 +65,7 @@ describe('Aggregate', function () {
         })
         .error(function (e) {
          loc.getUncommittedEventsAsync().then(function (res) {
-           res.length.should.equal(0);
+           expect(res).toHaveLength(0);
             done();
          });
         });

@@ -1,5 +1,4 @@
-var should = require('should');
-var Queue = require('../lib/queue');
+var Queue = require('../src/queue');
 
 describe('Queue', function () {
   describe('#queue', function () {
@@ -17,7 +16,7 @@ describe('Queue', function () {
       queue.queueCommand(function () {
         string = string + '10';
       }).then(function (res) {
-        string.should.eql('012345678910');
+        expect(string).toBe('012345678910');
         done();
       }).error(console.log);
     });
@@ -30,7 +29,7 @@ describe('Queue', function () {
 
       queue.queueCommand(change)
         .then(function (res) {
-          toChange.should.eql(10);
+          expect(toChange).toBe(10);
           done();
         });
     });
