@@ -181,6 +181,26 @@ describe('Repository', function () {
           done(err);
         });
     });
+    it('save should save commit ', function (done) {
+      var factory = function () {
+        return new Location();
+      };
+      var repo = new Repository(new Partition(), 'location', factory);
+      repo
+        .findById('123456789')
+        .then(function (location) {
+          location.registerName('New Name');
+          const streamId = null;
+          const callback = null;
+          const correlationId = '123456789';
+          repo.save(location, streamId, callback, correlationId).then(function (aggregate) {
+            done();
+          });
+        })
+        .catch(function (err) {
+          done(err);
+        });
+    });
   });
   describe('conflict strategy', function () {
     it('should throw in conflictStrategy with committedEvents', function (done) {
