@@ -1,7 +1,3 @@
-// var sdebug = require('slf-debug').default;
-// require('slf').LoggerFactory.setFactory(sdebug);
-// require('debug').enable('*');
-var should = require('should');
 var SnapshotPartition = require('./partitions/partitions').SnapshotPartition;
 var ConflictPartition = require('./partitions/partitions').ConflictPartition;
 var Partition = require('./partitions/partitions').Partition;
@@ -141,26 +137,16 @@ describe('Repository', function () {
         });
     });
   });
-  it('should allow delete', function (done) {
-    var factory = function () {
+  it('should allow delete', async function () {
+    const factory = function () {
       return new Location();
     };
-    var repo = new Repository(new Partition(), 'location', factory);
-    repo
-      .findById('ID_THAT_DO_NOT_EXIST')
-      .then(function (location) {
-        location.registerName('New Name');
-        repo
-          .save(location)
-          .then(function (x) {
-            location.delete();
-            return repo.save(location);
-          })
-          .then(function () {});
-      })
-      .catch(function (err) {
-        done(err);
-      });
+    const repo = new Repository(new Partition(), 'location', factory);
+    const location = await repo.findById('ID_THAT_DO_NOT_EXIST')
+    location.registerName('New Name');
+    await repo.save(location);
+    await location.delete();
+    return repo.save(location);
   });
   describe('#save', function () {
     it('save should clear uncommitted events ', function (done) {
@@ -181,25 +167,22 @@ describe('Repository', function () {
           done(err);
         });
     });
-    it('save should save commit ', function (done) {
-      var factory = function () {
+    it('save create commit with correlationId ', async function () {
+      const factory = function () {
         return new Location();
       };
-      var repo = new Repository(new Partition(), 'location', factory);
-      repo
-        .findById('123456789')
-        .then(function (location) {
-          location.registerName('New Name');
-          const streamId = null;
-          const callback = null;
-          const correlationId = '123456789';
-          repo.save(location, streamId, callback, correlationId).then(function (aggregate) {
-            done();
-          });
-        })
-        .catch(function (err) {
-          done(err);
-        });
+      const repo = new Repository(new Partition(), 'location', factory);
+      // Since the mock Location aggregate always has ID 1
+      const streamId = 1;
+      const location = await repo.findById(streamId);
+      location.id = streamId;
+      await location.registerName('New Name');
+      const callback = null;
+      const correlationId = '555';
+      await repo.save(location, streamId, callback, correlationId);
+      const events = await repo.findEventsById(streamId);
+      const hasCorrelationId = events.some((e) => e.correlationId === correlationId);
+      hasCorrelationId.should.equal(true);
     });
   });
   describe('conflict strategy', function () {

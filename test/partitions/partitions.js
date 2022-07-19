@@ -1,17 +1,22 @@
 var Promise = require('bluebird');
 
 var Partition = function () {
+  const streams = {};
   this.openStream = function (streamId) {
     var Stream = function () {
+      this.commits = streams[streamId] || [];
+      streams[streamId] = this.commits;
       this.getCommittedEvents = function () {
-        return [];
+        return this.commits;
       };
       this.getVersion = function () {
         return -1;
       };
       this.append = function () {};
-      this.commit = function () {
-        return Promise.resolve(null);
+      this.commit = function (id, callback, correlationId) {
+        const commit = { id, correlationId };
+        this.commits.push(commit);
+        return Promise.resolve(commit);
       };
     };
     return Promise.resolve(new Stream(streamId));
