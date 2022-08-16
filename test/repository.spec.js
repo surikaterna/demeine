@@ -152,7 +152,9 @@ describe('Repository', function () {
             location.delete();
             return repo.save(location);
           })
-          .then(function () {});
+          .then(function () {
+            done();
+          });
       })
       .catch(function (err) {
         done(err);
