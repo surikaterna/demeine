@@ -4,10 +4,21 @@
   "description": "DDDD - Distributed Domain Driven Design",
   "main": "lib/index.js",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "compile": "babel src --out-dir lib --extensions \".js,.ts,.tsx\" --source-maps inline"
+    "build": "rimraf lib && concurrently \"npm run build:src\" \"npm run build:types\"",
+    "build:watch": "rimraf lib && concurrently \"npm run build:src:watch\" \"npm run build:types:watch\"",
+    "build:src": "swc src --out-dir lib",
+    "build:src:watch": "npm run build:src -- --watch",
+    "build:types": "tsc",
+    "build:types:watch": "npm run build:types -- --watch",
+    "test": "jest --colors",
+    "test:watch": "npm test -- --watch",
+    "test:coverage": "npm test -- --collectCoverage",
+    "test:coverage:start": "npm run test:coverage && start coverage/lcov-report/index.html",
+    "lint": "eslint src",
+    "lint:fix": "eslint --fix src",
+    "format:check": "prettier --check src",
+    "format:fix": "prettier --write src",
+    "prepare": "npm test && npm run build"
   },
   "repository": {
     "type": "git",
@@ -22,14 +33,23 @@
   "author": "Surikat AB",
   "license": "MIT",
   "devDependencies": {
-    "@babel/cli": "^7.16.0",
-    "@babel/core": "^7.16.0",
-    "@babel/preset-env": "^7.16.4",
+    "@swc/cli": "^0.1.57",
+    "@swc/core": "^1.2.237",
+    "@swc/jest": "^0.2.22",
+    "@types/bluebird": "^3.5.36",
+    "@types/jest": "^28.1.7",
+    "@types/node": "^18.7.6",
+    "@types/uuid": "^8.3.4",
+    "concurrently": "^7.3.0",
+    "eslint": "^8.22.0",
+    "eslint-config-surikat": "^4.0.0",
     "jest": "^27.4.4",
-    "prettier": "^2.1.2",
+    "prettier": "^2.7.1",
     "prettier-config-surikaterna": "^1.0.1",
     "regenerator-runtime": "^0.13.9",
-    "slf-debug": "^0.2.0"
+    "rimraf": "^3.0.2",
+    "slf-debug": "^0.2.0",
+    "typescript": "^4.7.4"
   },
   "bugs": {
     "url": "https://github.com/surikaterna/demeine/issues"
