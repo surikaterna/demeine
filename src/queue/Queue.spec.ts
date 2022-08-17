@@ -5,7 +5,7 @@ describe('Queue', () => {
     it('Processes queue in order', async () => {
       const queue = new Queue();
       let string = '';
-      const incrementString = (i) => () => string += i;
+      const incrementString = (i: number) => () => string += i;
 
       for (let i = 0; i < 10; i++) {
         queue.queueCommand(incrementString(i));
