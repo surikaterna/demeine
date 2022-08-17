@@ -1,4 +1,4 @@
-var Queue = require('../src/queue');
+import { Queue } from './Queue';
 
 describe('Queue', function () {
   describe('#queue', function () {

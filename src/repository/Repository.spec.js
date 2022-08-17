@@ -1,56 +1,59 @@
-var SnapshotPartition = require('./partitions/partitions').SnapshotPartition;
-var ConflictPartition = require('./partitions/partitions').ConflictPartition;
-var Partition = require('./partitions/partitions').Partition;
-var Repository = require('../src').Repository;
+import { SnapshotPartition } from './__fixtures__/SnapshotPartition';
+import { ConflictPartition } from './__fixtures__/ConflictPartition';
+import { Partition } from './__fixtures__/Partition';
+import { Repository } from '../repository';
+import { Location } from '../aggregate/__fixtures__/Location';
 
-var Location = require('./aggregates/location');
-
-describe('Repository', function () {
-  describe('#findById', function () {
-    it('returns aggregate with version = -1 if new stream', function (done) {
+describe('Repository', function() {
+  describe('#findById', function() {
+    it('returns aggregate with version = -1 if new stream', function(done) {
       var repo = new Repository(new Partition(), 'test_aggregate', undefined, undefined, { resetSnapshotOnFail: false });
       repo
         .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function (aggregate) {
+        .then(function(aggregate) {
           expect(aggregate.getVersion()).toBe(-1);
           done();
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
 
-    it('creates aggregates with custom factory', function (done) {
-      var factory = function () {
+    it('creates aggregates with custom factory', function(done) {
+      var factory = function() {
         return new Location();
       };
       var repo = new Repository(new Partition(), 'location', factory);
       repo
         .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function (aggregate) {
+        .then(function(aggregate) {
           if (aggregate instanceof Location) {
             done();
           } else {
             done('Wrong type created');
           }
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
 
-    it('hydrates aggregates with snapshot', function (done) {
-      var factory = function () {
+    it('hydrates aggregates with snapshot', function(done) {
+      var factory = function() {
         return new Location();
       };
       var repo = new Repository(
-        new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [{ id: 1, type: 'location.registered_name.event', payload: 'Hello' }]),
+        new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [{
+          id: 1,
+          type: 'location.registered_name.event',
+          payload: 'Hello'
+        }]),
         'location',
         factory
       );
       repo
         .findById('1')
-        .then(function (aggregate) {
+        .then(function(aggregate) {
           if (aggregate instanceof Location) {
             expect(aggregate._getSnapshot().name).toBe('hello');
             expect(aggregate.getVersion()).toBe(1);
@@ -59,12 +62,12 @@ describe('Repository', function () {
             done('Wrong type created');
           }
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
-    it('hydrates aggregates with snapshot and events', function (done) {
-      var factory = function () {
+    it('hydrates aggregates with snapshot and events', function(done) {
+      var factory = function() {
         return new Location();
       };
       var repo = new Repository(
@@ -77,7 +80,7 @@ describe('Repository', function () {
       );
       repo
         .findById('1')
-        .then(function (aggregate) {
+        .then(function(aggregate) {
           if (aggregate instanceof Location) {
             expect(aggregate._getSnapshot().name).toBe('Hello, world');
             expect(aggregate.getVersion()).toBe(2);
@@ -86,22 +89,27 @@ describe('Repository', function () {
             done('Wrong type created');
           }
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
-    it('hydrates aggregates without snapshot', function (done) {
-      var factory = function () {
+    it('hydrates aggregates without snapshot', function(done) {
+      var factory = function() {
         return new Location();
       };
       var repo = new Repository(
-        new SnapshotPartition(undefined, [{ id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: 'Hello' }]),
+        new SnapshotPartition(undefined, [{
+          id: 1,
+          aggregateId: '1',
+          type: 'location.registered_name.event',
+          payload: 'Hello'
+        }]),
         'location',
         factory
       );
       repo
         .findById('1')
-        .then(function (aggregate) {
+        .then(function(aggregate) {
           if (aggregate instanceof Location) {
             expect(aggregate._getSnapshot().name).toBe('Hello');
             done();
@@ -109,12 +117,12 @@ describe('Repository', function () {
             done('Wrong type created');
           }
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
-    it('stores snapshot for aggregate on save', function (done) {
-      var factory = function () {
+    it('stores snapshot for aggregate on save', function(done) {
+      var factory = function() {
         return new Location();
       };
       var part = new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
@@ -123,71 +131,71 @@ describe('Repository', function () {
       var repo = new Repository(part, 'location', factory);
       repo
         .findById('1')
-        .then(function (aggregate) {
+        .then(function(aggregate) {
           aggregate.changeName('Hello, World!');
-          repo.save(aggregate).then(function () {
-            part.loadSnapshot('1').then(function (snapshot) {
+          repo.save(aggregate).then(function() {
+            part.loadSnapshot('1').then(function(snapshot) {
               expect(snapshot.snapshot.name).toBe('Hello, World!');
               done();
             });
           });
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
   });
-  it('should allow delete', function (done) {
-    var factory = function () {
+  it('should allow delete', function(done) {
+    var factory = function() {
       return new Location();
     };
     var repo = new Repository(new Partition(), 'location', factory);
     repo
       .findById('ID_THAT_DO_NOT_EXIST')
-      .then(function (location) {
+      .then(function(location) {
         location.registerName('New Name');
         repo
           .save(location)
-          .then(function (x) {
+          .then(function(x) {
             location.delete();
             return repo.save(location);
           })
-          .then(function () {
+          .then(function() {
             done();
           });
       })
-      .catch(function (err) {
+      .catch(function(err) {
         done(err);
       });
   });
-  describe('#save', function () {
-    it('save should clear uncommitted events ', function (done) {
-      var factory = function () {
+  describe('#save', function() {
+    it('save should clear uncommitted events ', function(done) {
+      var factory = function() {
         return new Location();
       };
       var repo = new Repository(new Partition(), 'location', factory);
       repo
         .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function (location) {
+        .then(function(location) {
           location.registerName('New Name');
-          repo.save(location).then(function (x) {
+          repo.save(location).then(function(x) {
             expect(x.getUncommittedEvents()).toHaveLength(0);
             done();
           });
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
   });
-  describe('conflict strategy', function () {
-    it('should throw in conflictStrategy with committedEvents', function (done) {
-      var factory = function () {
+  describe('conflict strategy', function() {
+    it('should throw in conflictStrategy with committedEvents', function(done) {
+      var factory = function() {
         return new Location();
       };
       var conflictStrategyCalled = false;
       var part = new ConflictPartition(1);
-      const conflictStrategy = function (nextEvents, committedEvents) {
+      const conflictStrategy = function(nextEvents, committedEvents) {
         expect(nextEvents[0].payload).toBe('New Name');
         expect(committedEvents[0].payload).toBe('New Name committed');
         conflictStrategyCalled = true;
@@ -196,24 +204,24 @@ describe('Repository', function () {
       var repo = new Repository(part, 'location', factory, conflictStrategy);
       repo
         .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function (location) {
+        .then(function(location) {
           location.registerName('New Name');
-          repo.save(location).catch(function () {
+          repo.save(location).catch(function() {
             expect(conflictStrategyCalled).toBe(true);
             done();
           });
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
-    it('should throw in conflictStrategy without committedEvents', function (done) {
-      var factory = function () {
+    it('should throw in conflictStrategy without committedEvents', function(done) {
+      var factory = function() {
         return new Location();
       };
       var conflictStrategyCalled = false;
       var part = new ConflictPartition(1);
-      const conflictStrategy = function (nextEvents) {
+      const conflictStrategy = function(nextEvents) {
         expect(nextEvents[0].payload).toBe('New Name');
         conflictStrategyCalled = true;
         return true; // throw..
@@ -221,24 +229,24 @@ describe('Repository', function () {
       var repo = new Repository(part, 'location', factory, conflictStrategy);
       repo
         .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function (location) {
+        .then(function(location) {
           location.registerName('New Name');
-          repo.save(location).catch(function () {
+          repo.save(location).catch(function() {
             expect(conflictStrategyCalled).toBe(true);
             done();
           });
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
-    it('should not throw in conflictStrategy', function (done) {
-      var factory = function () {
+    it('should not throw in conflictStrategy', function(done) {
+      var factory = function() {
         return new Location();
       };
       var conflictStrategyCalled = false;
       var part = new ConflictPartition(1);
-      const conflictStrategy = function (nextEvents) {
+      const conflictStrategy = function(nextEvents) {
         expect(nextEvents[0].payload).toBe('New Name');
         conflictStrategyCalled = true;
         return false; // do not throw..
@@ -246,25 +254,25 @@ describe('Repository', function () {
       var repo = new Repository(part, 'location', factory, conflictStrategy);
       repo
         .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function (location) {
+        .then(function(location) {
           location.registerName('New Name');
           repo
             .save(location)
-            .then(function () {
+            .then(function() {
               done();
             })
-            .catch(function (e) {
+            .catch(function(e) {
               expect(conflictStrategyCalled).toBe(true);
               done(e);
             });
         })
-        .catch(function (err) {
+        .catch(function(err) {
           done(err);
         });
     });
   });
-  it('removes and retries snapshot but does not end up in loop if not working', function (done) {
-    var factory = function () {
+  it('removes and retries snapshot but does not end up in loop if not working', function(done) {
+    var factory = function() {
       return new Location();
     };
     var repo = new Repository(
@@ -277,15 +285,15 @@ describe('Repository', function () {
     );
     repo
       .findById('1')
-      .then(function () {
+      .then(function() {
         done(new Error('should not fulfill'));
       })
-      .catch(function () {
+      .catch(function() {
         done();
       });
   });
-  it('removes and retries snapshot create when snapshot is broken', function (done) {
-    var factory = function () {
+  it('removes and retries snapshot create when snapshot is broken', function(done) {
+    var factory = function() {
       return new Location();
     };
     var repo = new Repository(
@@ -299,7 +307,7 @@ describe('Repository', function () {
     );
     repo
       .findById('1')
-      .then(function (aggregate) {
+      .then(function(aggregate) {
         if (aggregate instanceof Location) {
           expect(aggregate._getSnapshot().name).toBe('Hello, world');
           expect(aggregate.getVersion()).toBe(2);
@@ -308,7 +316,7 @@ describe('Repository', function () {
           done('Wrong type created');
         }
       })
-      .catch(function (err) {
+      .catch(function(err) {
         done(err);
       });
   });
