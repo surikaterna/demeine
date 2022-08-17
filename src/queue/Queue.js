@@ -1,19 +1,12 @@
 import EventEmitter from 'events';
-import Promise from 'bluebird';
-import PromiseQueue from './PromiseQueue';
-
-PromiseQueue.configure(Promise);
+import PQueue from 'p-queue';
 
 export class Queue extends EventEmitter {
-  constructor(jobTimeout, options) {
+  constructor(options) {
     super();
-    this._maxConcurrent = options && options.concurrency || 1;
-    this._maxQueue = Infinity;
-    this._queue = new PromiseQueue(this._maxConcurrent, this._maxQueue, { onEmpty: this._queueComplete.bind(this) });
-  }
-
-  _queueComplete() {
-    this._notifyWaitingClients();
+    this._queue = new PQueue({
+      concurrency: options?.concurrency || 1
+    });
   }
 
   queueCommand(fn) {
@@ -21,22 +14,10 @@ export class Queue extends EventEmitter {
   }
 
   isProcessing() {
-    return this._queue.getPendingLength() > 0;
+    return this._queue.size > 0;
   }
 
   empty() {
-    return new Promise((resolve, reject) => {
-      if (!this.isProcessing()) {
-        resolve(this);
-      } else {
-        this.once('empty', () => {
-          resolve(this);
-        });
-      }
-    });
-  }
-
-  _notifyWaitingClients() {
-    this.emit('empty');
+    return this._queue.onIdle();
   }
 }

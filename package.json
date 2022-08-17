@@ -36,6 +36,7 @@
   "homepage": "https://github.com/surikaterna/demeine",
   "dependencies": {
     "bluebird": "^2.9.12",
+    "p-queue": "^6.6.2",
     "slf": "^1.x",
     "uuid": "^3.0.1"
   }

@@ -51,7 +51,7 @@ describe('Aggregate', function() {
         .then(function(result) {
           done(new Error('Unreachable'));
         })
-        .error(function(e) {
+        .catch(function(e) {
           loc.getUncommittedEventsAsync().then(function(res) {
             expect(res).toHaveLength(0);
             done();
@@ -64,7 +64,7 @@ describe('Aggregate', function() {
         .then(function(result) {
           done(new Error('Unreachable'));
         })
-        .error(function(e) {
+        .catch(function(e) {
           loc.getUncommittedEventsAsync().then(function(res) {
             expect(res).toHaveLength(0);
             done();

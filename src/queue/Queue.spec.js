@@ -18,7 +18,7 @@ describe('Queue', function () {
       }).then(function (res) {
         expect(string).toBe('012345678910');
         done();
-      }).error(console.log);
+      }).catch(console.log);
     });
     it('should return promise that is resolved upon running complete', function (done) {
       var queue = new Queue();
