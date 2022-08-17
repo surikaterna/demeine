@@ -8,5 +8,8 @@ module.exports = {
   testTimeout: 2000,
   transform: {
     '^.+\\.[t|j]s$': 'babel-jest'
-  }
+  },
+  setupFiles: [
+    './jest-setup.js'
+  ]
 };

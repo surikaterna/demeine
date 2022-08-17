@@ -4,45 +4,25 @@ import { Partition } from './__fixtures__/Partition';
 import { Repository } from '../repository';
 import { Location } from '../aggregate/__fixtures__/Location';
 
-describe('Repository', function() {
-  describe('#findById', function() {
-    it('returns aggregate with version = -1 if new stream', function(done) {
-      var repo = new Repository(new Partition(), 'test_aggregate', undefined, undefined, { resetSnapshotOnFail: false });
-      repo
-        .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function(aggregate) {
-          expect(aggregate.getVersion()).toBe(-1);
-          done();
-        })
-        .catch(function(err) {
-          done(err);
-        });
+describe('Repository', () => {
+  const factory = () => new Location();
+
+  describe('#findById', () => {
+    it('returns aggregate with version = -1 if new stream', async () => {
+      const repository = new Repository(new Partition(), 'test_aggregate', undefined, undefined, { resetSnapshotOnFail: false });
+      const aggregate = await repository.findById('ID_THAT_DO_NOT_EXIST');
+      expect(aggregate.getVersion()).toBe(-1);
     });
 
-    it('creates aggregates with custom factory', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var repo = new Repository(new Partition(), 'location', factory);
-      repo
-        .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function(aggregate) {
-          if (aggregate instanceof Location) {
-            done();
-          } else {
-            done('Wrong type created');
-          }
-        })
-        .catch(function(err) {
-          done(err);
-        });
+    it('creates aggregates with custom factory', async () => {
+      const repository = new Repository(new Partition(), 'location', factory);
+
+      const aggregate = await repository.findById('ID_THAT_DO_NOT_EXIST');
+      expect(aggregate).toBeInstanceOf(Location);
     });
 
-    it('hydrates aggregates with snapshot', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var repo = new Repository(
+    it('hydrates aggregates with snapshot', async () => {
+      const repository = new Repository(
         new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [{
           id: 1,
           type: 'location.registered_name.event',
@@ -51,26 +31,15 @@ describe('Repository', function() {
         'location',
         factory
       );
-      repo
-        .findById('1')
-        .then(function(aggregate) {
-          if (aggregate instanceof Location) {
-            expect(aggregate._getSnapshot().name).toBe('hello');
-            expect(aggregate.getVersion()).toBe(1);
-            done();
-          } else {
-            done('Wrong type created');
-          }
-        })
-        .catch(function(err) {
-          done(err);
-        });
+
+      const aggregate = await repository.findById('1');
+      expect(aggregate).toBeInstanceOf(Location);
+      expect(aggregate._getSnapshot().name).toBe('hello');
+      expect(aggregate.getVersion()).toBe(1);
     });
-    it('hydrates aggregates with snapshot and events', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var repo = new Repository(
+
+    it('hydrates aggregates with snapshot and events', async () => {
+      const repository = new Repository(
         new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
           { id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: 'Hello' },
           { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello, world' }
@@ -78,26 +47,15 @@ describe('Repository', function() {
         'location',
         factory
       );
-      repo
-        .findById('1')
-        .then(function(aggregate) {
-          if (aggregate instanceof Location) {
-            expect(aggregate._getSnapshot().name).toBe('Hello, world');
-            expect(aggregate.getVersion()).toBe(2);
-            done();
-          } else {
-            done('Wrong type created');
-          }
-        })
-        .catch(function(err) {
-          done(err);
-        });
+
+      const aggregate = await repository.findById('1');
+      expect(aggregate).toBeInstanceOf(Location);
+      expect(aggregate._getSnapshot().name).toBe('Hello, world');
+      expect(aggregate.getVersion()).toBe(2);
     });
-    it('hydrates aggregates without snapshot', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var repo = new Repository(
+
+    it('hydrates aggregates without snapshot', async () => {
+      const repository = new Repository(
         new SnapshotPartition(undefined, [{
           id: 1,
           aggregateId: '1',
@@ -107,175 +65,102 @@ describe('Repository', function() {
         'location',
         factory
       );
-      repo
-        .findById('1')
-        .then(function(aggregate) {
-          if (aggregate instanceof Location) {
-            expect(aggregate._getSnapshot().name).toBe('Hello');
-            done();
-          } else {
-            done('Wrong type created');
-          }
-        })
-        .catch(function(err) {
-          done(err);
-        });
+      const aggregate = await repository.findById('1');
+      expect(aggregate).toBeInstanceOf(Location);
+      expect(aggregate._getSnapshot().name).toBe('Hello');
     });
-    it('stores snapshot for aggregate on save', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var part = new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
+
+    it('stores snapshot for aggregate on save', async () => {
+      const partition = new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
         { id: 1, type: 'location.registered_name.event', payload: 'Hello' }
       ]);
-      var repo = new Repository(part, 'location', factory);
-      repo
-        .findById('1')
-        .then(function(aggregate) {
-          aggregate.changeName('Hello, World!');
-          repo.save(aggregate).then(function() {
-            part.loadSnapshot('1').then(function(snapshot) {
-              expect(snapshot.snapshot.name).toBe('Hello, World!');
-              done();
-            });
-          });
-        })
-        .catch(function(err) {
-          done(err);
-        });
+      const repository = new Repository(partition, 'location', factory);
+
+      const aggregate = await repository.findById('1');
+      aggregate.changeName('Hello, World!');
+      await repository.save(aggregate);
+
+      const snapshot = await partition.loadSnapshot('1');
+      expect(snapshot.snapshot.name).toBe('Hello, World!');
     });
   });
-  it('should allow delete', function(done) {
-    var factory = function() {
-      return new Location();
-    };
-    var repo = new Repository(new Partition(), 'location', factory);
-    repo
-      .findById('ID_THAT_DO_NOT_EXIST')
-      .then(function(location) {
-        location.registerName('New Name');
-        repo
-          .save(location)
-          .then(function(x) {
-            location.delete();
-            return repo.save(location);
-          })
-          .then(function() {
-            done();
-          });
-      })
-      .catch(function(err) {
-        done(err);
-      });
+
+  it('should allow delete', async () => {
+    const repository = new Repository(new Partition(), 'location', factory);
+    const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
+
+    location.registerName('New Name');
+    await repository.save(location);
+    location.delete();
+    return repository.save(location);
   });
-  describe('#save', function() {
-    it('save should clear uncommitted events ', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var repo = new Repository(new Partition(), 'location', factory);
-      repo
-        .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function(location) {
-          location.registerName('New Name');
-          repo.save(location).then(function(x) {
-            expect(x.getUncommittedEvents()).toHaveLength(0);
-            done();
-          });
-        })
-        .catch(function(err) {
-          done(err);
-        });
+
+  describe('#save', () => {
+    it('save should clear uncommitted events ', async () => {
+      const repository = new Repository(new Partition(), 'location', factory);
+      const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
+      location.registerName('New Name');
+
+      const savedLocation = await repository.save(location);
+      expect(savedLocation.getUncommittedEvents()).toHaveLength(0);
     });
   });
-  describe('conflict strategy', function() {
-    it('should throw in conflictStrategy with committedEvents', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var conflictStrategyCalled = false;
-      var part = new ConflictPartition(1);
-      const conflictStrategy = function(nextEvents, committedEvents) {
+  describe('conflict strategy', () => {
+    it('should throw in conflictStrategy with committedEvents', async () => {
+      let conflictStrategyCalled = false;
+      const partition = new ConflictPartition(1);
+
+      const conflictStrategy = (nextEvents, committedEvents) => {
         expect(nextEvents[0].payload).toBe('New Name');
         expect(committedEvents[0].payload).toBe('New Name committed');
         conflictStrategyCalled = true;
         return true; // throw..
       };
-      var repo = new Repository(part, 'location', factory, conflictStrategy);
-      repo
-        .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function(location) {
-          location.registerName('New Name');
-          repo.save(location).catch(function() {
-            expect(conflictStrategyCalled).toBe(true);
-            done();
-          });
-        })
-        .catch(function(err) {
-          done(err);
-        });
+
+      const repository = new Repository(partition, 'location', factory, conflictStrategy);
+      const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
+      location.registerName('New Name');
+
+      await expect(repository.save(location)).rejects.toThrow();
+      expect(conflictStrategyCalled).toBe(true);
     });
-    it('should throw in conflictStrategy without committedEvents', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var conflictStrategyCalled = false;
-      var part = new ConflictPartition(1);
-      const conflictStrategy = function(nextEvents) {
+
+    it('should throw in conflictStrategy without committedEvents', async () => {
+      let conflictStrategyCalled = false;
+      const partition = new ConflictPartition(1);
+
+      const conflictStrategy = (nextEvents) => {
         expect(nextEvents[0].payload).toBe('New Name');
         conflictStrategyCalled = true;
         return true; // throw..
       };
-      var repo = new Repository(part, 'location', factory, conflictStrategy);
-      repo
-        .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function(location) {
-          location.registerName('New Name');
-          repo.save(location).catch(function() {
-            expect(conflictStrategyCalled).toBe(true);
-            done();
-          });
-        })
-        .catch(function(err) {
-          done(err);
-        });
+
+      const repository = new Repository(partition, 'location', factory, conflictStrategy);
+      const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
+      location.registerName('New Name');
+      await expect(repository.save(location)).rejects.toThrow();
+      expect(conflictStrategyCalled).toBe(true);
     });
-    it('should not throw in conflictStrategy', function(done) {
-      var factory = function() {
-        return new Location();
-      };
-      var conflictStrategyCalled = false;
-      var part = new ConflictPartition(1);
-      const conflictStrategy = function(nextEvents) {
+
+    it('should not throw in conflictStrategy', async () => {
+      let conflictStrategyCalled = false;
+      const partition = new ConflictPartition(1);
+
+      const conflictStrategy = (nextEvents) => {
         expect(nextEvents[0].payload).toBe('New Name');
         conflictStrategyCalled = true;
         return false; // do not throw..
       };
-      var repo = new Repository(part, 'location', factory, conflictStrategy);
-      repo
-        .findById('ID_THAT_DO_NOT_EXIST')
-        .then(function(location) {
-          location.registerName('New Name');
-          repo
-            .save(location)
-            .then(function() {
-              done();
-            })
-            .catch(function(e) {
-              expect(conflictStrategyCalled).toBe(true);
-              done(e);
-            });
-        })
-        .catch(function(err) {
-          done(err);
-        });
+
+      const repository = new Repository(partition, 'location', factory, conflictStrategy);
+      const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
+      location.registerName('New Name');
+      await repository.save(location);
     });
   });
-  it('removes and retries snapshot but does not end up in loop if not working', function(done) {
-    var factory = function() {
-      return new Location();
-    };
-    var repo = new Repository(
+
+  it('removes and retries snapshot but does not end up in loop if not working', () => {
+    const repository = new Repository(
       new SnapshotPartition({ id: '1', version: 1, snapshot: { no_name: 'hello' } }, [
         { id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello' },
         { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello, world' }
@@ -283,20 +168,12 @@ describe('Repository', function() {
       'location',
       factory
     );
-    repo
-      .findById('1')
-      .then(function() {
-        done(new Error('should not fulfill'));
-      })
-      .catch(function() {
-        done();
-      });
+
+    expect(repository.findById('1')).rejects.toThrow();
   });
-  it('removes and retries snapshot create when snapshot is broken', function(done) {
-    var factory = function() {
-      return new Location();
-    };
-    var repo = new Repository(
+
+  it('removes and retries snapshot create when snapshot is broken', async () => {
+    const repository = new Repository(
       new SnapshotPartition({ id: '1', version: 1, snapshot: { no_name: 'hello' } }, [
         { id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: 'Hello' },
         { id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello' },
@@ -305,19 +182,10 @@ describe('Repository', function() {
       'location',
       factory
     );
-    repo
-      .findById('1')
-      .then(function(aggregate) {
-        if (aggregate instanceof Location) {
-          expect(aggregate._getSnapshot().name).toBe('Hello, world');
-          expect(aggregate.getVersion()).toBe(2);
-          done();
-        } else {
-          done('Wrong type created');
-        }
-      })
-      .catch(function(err) {
-        done(err);
-      });
+    const location = await repository.findById('1');
+
+    expect(location).toBeInstanceOf(Location);
+    expect(location._getSnapshot().name).toBe('Hello, world');
+    expect(location.getVersion()).toBe(2);
   });
 });

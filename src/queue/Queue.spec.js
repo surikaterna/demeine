@@ -1,44 +1,35 @@
 import { Queue } from './Queue';
 
-describe('Queue', function () {
-  describe('#queue', function () {
-    it('Processes queue in order', function (done) {
-      var queue = new Queue();
-      var string = '';
-      var incrementString = function(i) {
-        return function() {
-          return string +=i ;
-        }
-      };
-      for (var i = 0; i < 10; i++) {
+describe('Queue', () => {
+  describe('#queue', () => {
+    it('Processes queue in order', async () => {
+      const queue = new Queue();
+      let string = '';
+      const incrementString = (i) => () => string += i;
+
+      for (let i = 0; i < 10; i++) {
         queue.queueCommand(incrementString(i));
       }
-      queue.queueCommand(function () {
+
+      await queue.queueCommand(() => {
         string = string + '10';
-      }).then(function (res) {
-        expect(string).toBe('012345678910');
-        done();
-      }).catch(console.log);
-    });
-    it('should return promise that is resolved upon running complete', function (done) {
-      var queue = new Queue();
-      var toChange = 12;
-      var change = function () {
-        toChange = 10;
-      };
+      });
 
-      queue.queueCommand(change)
-        .then(function (res) {
-          expect(toChange).toBe(10);
-          done();
-        });
-    });
-    it('should return promise that is resolved directly when not running', function (done) {
-      var queue = new Queue();
-      queue.empty().then(function () {
-        done();
-      })
+      expect(string).toBe('012345678910');
     });
 
+    it('should return promise that is resolved upon running complete', async () => {
+      const queue = new Queue();
+      let toChange = 12;
+      const change = () => toChange = 10;
+
+      await queue.queueCommand(change);
+      expect(toChange).toBe(10);
+    });
+
+    it('should return promise that is resolved directly when not running', async () => {
+      const queue = new Queue();
+      await queue.empty();
+    });
   });
 });

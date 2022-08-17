@@ -1,101 +1,63 @@
-import Promise from 'bluebird';
 import { LoggerFactory } from 'slf';
 import sdebug from 'slf-debug';
 import { Location } from './__fixtures__/Location';
 
 LoggerFactory.setFactory(sdebug);
 
-describe('Aggregate', function() {
-  describe('#_apply', function() {
-    it('_apply with new event should add to uncommitted collection', function() {
-      var loc = new Location();
-      loc.registerName('test');
-      loc.getUncommittedEventsAsync().then(function(res) {
-        expect(res).toHaveLength(1);
-      });
+describe('Aggregate', () => {
+  describe('#_apply', () => {
+    it('_apply with new event should add to uncommitted collection', async () => {
+      const location = new Location();
+      location.registerName('test');
+      const events = await location.getUncommittedEventsAsync();
+      expect(events).toHaveLength(1);
     });
   });
-  describe('#_sink (with promise)', function() {
-    it('_sink with promise should resolve promise before processing', function(done) {
-      var loc = new Location();
-      loc.registerName('Initial Name');
-      loc.changeNameAsync('FIRST-CHANGE');
-      loc.registerName('SECOND-CHANGE');
-      loc.changeNameAsync('THIRD-CHANGE');
 
-      expect(function() {
+  describe('#_sink (with promise)', () => {
+    it('_sink with promise should resolve promise before processing', async () => {
+      const location = new Location();
+      location.registerName('Initial Name');
+      location.changeNameAsync('FIRST-CHANGE');
+      location.registerName('SECOND-CHANGE');
+      location.changeNameAsync('THIRD-CHANGE');
+
+      expect(() => {
         // Should throw if trying to get uncommitted events while still processing
-        loc.getUncommittedEvents();
+        location.getUncommittedEvents();
       }).toThrow();
 
-      loc.getUncommittedEventsAsync().then(function(res) {
-        expect(res[0].payload).toBe('Initial Name');
-        expect(res[1].payload).toBe('FIRST-CHANGE');
-        expect(res[2].payload).toBe('SECOND-CHANGE');
-        expect(res[3].payload).toBe('THIRD-CHANGE');
-        expect(res).toHaveLength(4);
-        done();
-      });
+      const events = await location.getUncommittedEventsAsync();
+      expect(events[0].payload).toBe('Initial Name');
+      expect(events[1].payload).toBe('FIRST-CHANGE');
+      expect(events[2].payload).toBe('SECOND-CHANGE');
+      expect(events[3].payload).toBe('THIRD-CHANGE');
+      expect(events).toHaveLength(4);
     });
   });
-  describe('#<promise> domain function', function() {
-    it('should wait for promise', function(done) {
-      var loc = new Location();
-      loc.registerName('test').then(function(result) {
+
+  describe('#<promise> domain function', () => {
+    it('should wait for promise', (done) => {
+      const location = new Location();
+      location.registerName('test').then(() => {
         done();
       });
     });
-    it('should return promise error when failure in process', function(done) {
-      var loc = new Location();
-      loc.failName('test')
-        .then(function(result) {
-          done(new Error('Unreachable'));
-        })
-        .catch(function(e) {
-          loc.getUncommittedEventsAsync().then(function(res) {
-            expect(res).toHaveLength(0);
-            done();
-          });
-        });
+
+    it('should return promise error when failure in process', async () => {
+      const location = new Location();
+      await expect(location.failName('test')).rejects.toThrow();
+
+      const events = await location.getUncommittedEventsAsync();
+      expect(events).toHaveLength(0);
     });
-    it('should return promise error when failure in process by throwing', function(done) {
-      var loc = new Location();
-      loc.failName('fail early')
-        .then(function(result) {
-          done(new Error('Unreachable'));
-        })
-        .catch(function(e) {
-          loc.getUncommittedEventsAsync().then(function(res) {
-            expect(res).toHaveLength(0);
-            done();
-          });
-        });
-    });
-    it('should get error', function(done) {
-      var promise = giefPromisePlz();
-      promise
-        .then(function(res) {
-          done(new Error('Unreachable'));
-        })
-        .error(function(err) {
-          done();
-        });
+
+    it('should return promise error when failure in process by throwing', async () => {
+      const location = new Location();
+      expect(location.failName('fail early')).rejects.toThrow('Failing early');
+
+      const events = await location.getUncommittedEventsAsync();
+      expect(events).toHaveLength(0);
     });
   });
 });
-
-var giefPromisePlz = function() {
-  return new Promise(function(resolve, reject) {
-    try {
-      var functionThatThrows = function() {
-        throw new Error('error is thrown!');
-      };
-      var test = functionThatThrows();
-      resolve(test);
-    } catch (error) {
-      reject(error);
-    }
-  }).error(function(error) {
-    throw error;
-  });
-};
