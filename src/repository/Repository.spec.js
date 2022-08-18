@@ -26,7 +26,7 @@ describe('Repository', () => {
         new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [{
           id: 1,
           type: 'location.registered_name.event',
-          payload: 'Hello'
+          payload: { name: 'Hello' }
         }]),
         'location',
         factory
@@ -41,8 +41,8 @@ describe('Repository', () => {
     it('hydrates aggregates with snapshot and events', async () => {
       const repository = new Repository(
         new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
-          { id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: 'Hello' },
-          { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello, world' }
+          { id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: { name: 'Hello' } },
+          { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: { name: 'Hello, world' } }
         ]),
         'location',
         factory
@@ -60,7 +60,7 @@ describe('Repository', () => {
           id: 1,
           aggregateId: '1',
           type: 'location.registered_name.event',
-          payload: 'Hello'
+          payload: { name: 'Hello' }
         }]),
         'location',
         factory
@@ -72,7 +72,7 @@ describe('Repository', () => {
 
     it('stores snapshot for aggregate on save', async () => {
       const partition = new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
-        { id: 1, type: 'location.registered_name.event', payload: 'Hello' }
+        { id: 1, type: 'location.registered_name.event', payload: { name: 'Hello' } }
       ]);
       const repository = new Repository(partition, 'location', factory);
 
@@ -111,8 +111,8 @@ describe('Repository', () => {
       const partition = new ConflictPartition(1);
 
       const conflictStrategy = (nextEvents, committedEvents) => {
-        expect(nextEvents[0].payload).toBe('New Name');
-        expect(committedEvents[0].payload).toBe('New Name committed');
+        expect(nextEvents[0].payload.name).toBe('New Name');
+        expect(committedEvents[0].payload.name).toBe('New Name committed');
         conflictStrategyCalled = true;
         return true; // throw..
       };
@@ -130,7 +130,7 @@ describe('Repository', () => {
       const partition = new ConflictPartition(1);
 
       const conflictStrategy = (nextEvents) => {
-        expect(nextEvents[0].payload).toBe('New Name');
+        expect(nextEvents[0].payload.name).toBe('New Name');
         conflictStrategyCalled = true;
         return true; // throw..
       };
@@ -147,7 +147,7 @@ describe('Repository', () => {
       const partition = new ConflictPartition(1);
 
       const conflictStrategy = (nextEvents) => {
-        expect(nextEvents[0].payload).toBe('New Name');
+        expect(nextEvents[0].payload.name).toBe('New Name');
         conflictStrategyCalled = true;
         return false; // do not throw..
       };
@@ -162,8 +162,8 @@ describe('Repository', () => {
   it('removes and retries snapshot but does not end up in loop if not working', () => {
     const repository = new Repository(
       new SnapshotPartition({ id: '1', version: 1, snapshot: { no_name: 'hello' } }, [
-        { id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello' },
-        { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello, world' }
+        { id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: { name: 'Hello' } },
+        { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: { name: 'Hello, world' } }
       ]),
       'location',
       factory
@@ -175,9 +175,9 @@ describe('Repository', () => {
   it('removes and retries snapshot create when snapshot is broken', async () => {
     const repository = new Repository(
       new SnapshotPartition({ id: '1', version: 1, snapshot: { no_name: 'hello' } }, [
-        { id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: 'Hello' },
-        { id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello' },
-        { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: 'Hello, world' }
+        { id: 1, aggregateId: '1', type: 'location.registered_name.event', payload: { name: 'Hello' } },
+        { id: 1, aggregateId: '1', type: 'location.changed_name.event', payload: { name: 'Hello' } },
+        { id: 2, aggregateId: '1', type: 'location.changed_name.event', payload: { name: 'Hello, world' } }
       ]),
       'location',
       factory

@@ -1,3 +1,5 @@
+import { getMessageFromError } from '../utils/errorUtils';
+import { Command, CommandHandler, CommandSink, Event, EventHandler } from './Aggregate.interfaces';
 import { Queue } from '../queue/Queue';
 import Promise from 'bluebird';
 import { LoggerFactory } from 'slf';
@@ -6,20 +8,31 @@ import { DefaultEventHandler } from './DefaultEventHandler';
 import { DefaultCommandHandler } from './DefaultCommandHandler';
 
 const LOG = LoggerFactory.getLogger('demeine:aggregate');
+type MaybePromise<T> = T | Promise<T>;
 
-function _promise(result, warning) {
-  if (!result || !result.then) {
+function _promise<T>(result?: globalThis.Promise<T>, warning?: string): globalThis.Promise<T | true> {
+  if (!result?.then) {
     LOG.warn(warning || 'not returning promise as expected');
-    result = Promise.resolve(true);
+    return Promise.resolve(true);
   }
   return result;
 }
 
-export class Aggregate {
-  constructor(commandSink, eventHandler, commandHandler) {
+export class Aggregate<State extends object = object> {
+  id?: string;
+  type?: string;
+  _uncommittedEvents: Array<Event>;
+  _commandHandler: CommandHandler;
+  _commandSink: CommandSink<State>;
+  _eventHandler: EventHandler;
+  _version: number;
+  _commandQueue: Queue;
+  _state: State;
+
+  constructor(commandSink?: CommandSink<State>, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
     this._uncommittedEvents = [];
     this._commandSink = commandSink || ({
-      sink: (cmd) => {
+      sink: (cmd: Command) => {
         return this._process(cmd);
       }
     });
@@ -27,9 +40,10 @@ export class Aggregate {
     this._commandHandler = commandHandler || new DefaultCommandHandler();
     this._version = 0;
     this._commandQueue = new Queue();
+    this._state = {} as State;
   }
 
-  _rehydrate(events, version, snapshot) {
+  _rehydrate(events: Array<Event>, version?: number, snapshot?: State): void {
     LOG.info('rehydrating aggregate with %d events to version %d has snapshot %s', events.length, version, snapshot !== undefined);
     // do another way?
     if (snapshot) {
@@ -41,18 +55,18 @@ export class Aggregate {
     this._version = version || this._version;
   }
 
-  _getSnapshot() {
+  _getSnapshot(): State | undefined {
     return this._state;
   }
 
-  _apply(event, isNew) {
+  _apply(event: Event, isNew?: boolean): Aggregate<State> {
     LOG.debug('applying event %j %s', event, isNew);
 
     if (!event.id) {
       event.id = uuid();
     }
     if (!event.type || !event.aggregateId || event.aggregateId != this.id) {
-      throw new Error('event is missing data', event);
+      throw new Error(`event is missing data: ${JSON.stringify(event)}`);
     }
     this._eventHandler.handle(this, event);
     if (this._version == -1) {
@@ -66,7 +80,7 @@ export class Aggregate {
     return this;
   }
 
-  _process(command) {
+  _process(command: Command): Promise<Aggregate<State>> {
     LOG.info('processing command %j', command);
     return new Promise((resolve, reject) => {
       try {
@@ -76,33 +90,33 @@ export class Aggregate {
         reject(error);
       }
     }).error((error) => {
-      LOG.error('Failed to process command %j', command, error);
+      LOG.error('Failed to process command %j. Error: %s', command, getMessageFromError(error));
       this.clearUncommittedEvents();
       throw error;
     });
   }
 
-  _sink(commandToSink) {
+  _sink(commandToSink: MaybePromise<Command>): globalThis.Promise<Aggregate<State> | true> {
     LOG.info('sinking command %j', commandToSink);
     return this._commandQueue.queueCommand(() => {
-      let thenned = Promise.resolve(commandToSink);
-      thenned = thenned.then((command) => {
+      let resolvedCommand = Promise.resolve(commandToSink);
+      const aggregatePromise = resolvedCommand.then((command) => {
         if (!command.id) {
           LOG.warn('No command id set, setting it automatiically');
           command.id = uuid();
         }
-        if (!command.type || !command.aggregateId || command.aggregateId != this.id) {
-          const error = new Error('command is missing data', command);
-          LOG.error('Unable to sink command', error);
+        if (!command.type || !command.aggregateId || command.aggregateId !== this.id) {
+          const error = new Error(`command is missing data: ${JSON.stringify(command)}`);
+          LOG.error('Unable to sink command. Error: %s', getMessageFromError(error));
           throw error;
         }
         if (this.type) {
           command.aggregateType = this.type;
         }
-        const result = this._commandSink.sink(command, this);
-        return _promise(result, 'sinking command but not returning promise, commands status and chaining might not work as expected');
+        const aggregate = this._commandSink.sink(command, this);
+        return _promise(aggregate, 'sinking command but not returning promise, commands status and chaining might not work as expected');
       });
-      return thenned;
+      return aggregatePromise;
     });
   }
 
@@ -113,7 +127,7 @@ export class Aggregate {
     return this._sink({ type: '$stream.delete.command', aggregateId: this.id, payload: {} });
   }
 
-  processDelete(command) {
+  processDelete(command: Command): Aggregate<State> {
     return this._apply(
       {
         type: '$stream.deleted.event',
@@ -127,32 +141,32 @@ export class Aggregate {
     );
   }
 
-  applyDeleted() {
+  applyDeleted(): void {
   }
 
-  getVersion() {
+  getVersion(): number {
     return this._version;
   }
 
-  getUncommittedEvents() {
+  getUncommittedEvents<Payload extends object = object>(): Array<Event<Payload>> {
     //throw if async cmd is on queue
     if (this._commandQueue.isProcessing()) {
       throw new Error('Cannot get uncommitted events while there is still commands in queue - try using getUncommittedEventsAsync()');
     }
-    return this._uncommittedEvents;
+    return this._uncommittedEvents as Array<Event<Payload>>;
   }
 
-  getUncommittedEventsAsync() {
+  getUncommittedEventsAsync<Payload extends object = object>(): globalThis.Promise<Array<Event<Payload>>> {
     return this._commandQueue.empty().then(() => {
       if (this._commandQueue.isProcessing()) {
-        return this.getUncommittedEventsAsync();
+        return this.getUncommittedEventsAsync<Payload>();
       } else {
-        return this.getUncommittedEvents();
+        return this.getUncommittedEvents<Payload>();
       }
     });
   }
 
-  clearUncommittedEvents() {
+  clearUncommittedEvents(): Array<Event> {
     LOG.info('Clearing uncommitted events');
     return (this._uncommittedEvents = []);
   }

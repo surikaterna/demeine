@@ -1,6 +1,7 @@
 import { LoggerFactory } from 'slf';
+// @ts-expect-error TS7016: Could not find a declaration file for module 'slf-debug'
 import sdebug from 'slf-debug';
-import { Location } from './__fixtures__/Location';
+import { Location, RegisterNamePayload } from './__fixtures__/Location';
 
 LoggerFactory.setFactory(sdebug);
 
@@ -27,11 +28,11 @@ describe('Aggregate', () => {
         location.getUncommittedEvents();
       }).toThrow();
 
-      const events = await location.getUncommittedEventsAsync();
-      expect(events[0].payload).toBe('Initial Name');
-      expect(events[1].payload).toBe('FIRST-CHANGE');
-      expect(events[2].payload).toBe('SECOND-CHANGE');
-      expect(events[3].payload).toBe('THIRD-CHANGE');
+      const events = await location.getUncommittedEventsAsync<RegisterNamePayload>();
+      expect(events[0].payload.name).toBe('Initial Name');
+      expect(events[1].payload.name).toBe('FIRST-CHANGE');
+      expect(events[2].payload.name).toBe('SECOND-CHANGE');
+      expect(events[3].payload.name).toBe('THIRD-CHANGE');
       expect(events).toHaveLength(4);
     });
   });
