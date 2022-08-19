@@ -2,7 +2,7 @@ import Promise from 'bluebird';
 import { Aggregate } from '../Aggregate';
 import { Command, CommandSink, Event, EventHandler } from '../Aggregate.interfaces';
 
-interface LocationState {
+export interface LocationState {
   name?: string;
 }
 

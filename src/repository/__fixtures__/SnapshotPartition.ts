@@ -5,7 +5,7 @@ import { AggregateSnapshot, Partition } from '../Partition';
 import { Callback, Commit } from '../Repository.interfaces';
 import { SnapshotStream } from './SnapshotStream';
 
-export class SnapshotPartition implements Partition {
+export class SnapshotPartition<T extends Aggregate = Aggregate> implements Partition<T> {
   private _snapshot?: AggregateSnapshot;
   private _events: Array<Event>;
 
@@ -14,11 +14,11 @@ export class SnapshotPartition implements Partition {
     this._events = events;
   }
 
-  delete(id: string, event: Event): Promise<Aggregate> {
+  delete(id: string, event: Event): Promise<T> {
     throw new Error('Method not implemented.');
   }
 
-  loadSnapshot() {
+  loadSnapshot(id: string): Promise<AggregateSnapshot<T['_state']> | null> {
     return Promise.resolve(this._snapshot ?? null);
   }
 

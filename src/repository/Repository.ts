@@ -9,22 +9,22 @@ import { Callback, ConcurrencyStrategy, RepositoryOptions } from './Repository.i
 
 const LOG = require('slf').Logger.getLogger('demeine:repository');
 
-export class Repository<State extends object = object, Payload extends object = object> {
-  _partition: Partition<State, Payload>;
-  _factory: AggregateFactory<State>;
+export class Repository<T extends Aggregate = Aggregate, Payload extends object = object> {
+  _partition: Partition<T, Payload>;
+  _factory: AggregateFactory<T>;
   _aggregateType: string;
   _resetSnapshotOnFail: boolean;
   _concurrencyStrategy?: ConcurrencyStrategy<Payload>;
 
-  constructor(partition: Partition<State, Payload>, aggregateType: string, factory?: AggregateFactory<State>, concurrencyStrategy?: ConcurrencyStrategy<Payload>, options: RepositoryOptions = {}) {
+  constructor(partition: Partition<T, Payload>, aggregateType: string, factory?: AggregateFactory<T>, concurrencyStrategy?: ConcurrencyStrategy<Payload>, options: RepositoryOptions = {}) {
     this._partition = partition;
-    this._factory = factory || DefaultFactory<State>(aggregateType);
+    this._factory = factory || DefaultFactory<T>(aggregateType);
     this._aggregateType = aggregateType;
     this._concurrencyStrategy = concurrencyStrategy;
     this._resetSnapshotOnFail = options.resetSnapshotOnFail ?? true;
   }
 
-  findById(id: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+  findById(id: string, callback?: Callback<T>): Promise<T> {
     LOG.info('%s findById(%s)', this._aggregateType, id);
     if (this._partition.queryStreamWithSnapshot !== undefined) {
       return this.findByQueryStreamWithSnapshot(id, false, callback);
@@ -44,7 +44,7 @@ export class Repository<State extends object = object, Payload extends object = 
     }
   }
 
-  findBySnapshot(id: string, isRetry: boolean, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+  findBySnapshot(id: string, isRetry: boolean, callback?: Callback<T>): Promise<T> {
     LOG.info('%s findBySnapshot(%s)', this._aggregateType, id);
     const loadSnapshot = this._partition.loadSnapshot?.bind(this._partition);
     const queryStream = this._partition.queryStream?.bind(this._partition);
@@ -84,7 +84,7 @@ export class Repository<State extends object = object, Payload extends object = 
       .nodeify(callback);
   }
 
-  findByQueryStreamWithSnapshot(id: string, isRetry: boolean, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+  findByQueryStreamWithSnapshot(id: string, isRetry: boolean, callback?: Callback<T>): Promise<T> {
     LOG.info('%s findByQueryStreamWithSnapshot(%s)', this._aggregateType, id);
 
     const queryStreamWithSnapshot = this._partition.queryStreamWithSnapshot?.bind(this._partition);
@@ -128,7 +128,7 @@ export class Repository<State extends object = object, Payload extends object = 
       .nodeify(callback);
   }
 
-  checkConcurrencyStrategy(aggregate: Aggregate<State>, stream: Stream<Payload>, uncommittedEvents: Array<Event<Payload>>): Promise<boolean> {
+  checkConcurrencyStrategy(aggregate: T, stream: Stream<Payload>, uncommittedEvents: Array<Event<Payload>>): Promise<boolean> {
     const isNewStream = stream._version === -1;
     let shouldThrow = false;
     return new Promise((resolve) => {
@@ -165,11 +165,11 @@ export class Repository<State extends object = object, Payload extends object = 
     return null;
   }
 
-  _delete(aggregate: Aggregate<State>, deleteEvent: Event<Payload>): Promise<Aggregate<State>> {
+  _delete(aggregate: T, deleteEvent: Event<Payload>): Promise<T> {
     return this._partition.delete(aggregate.id, deleteEvent);
   }
 
-  save(aggregate: Aggregate<State>, commitId: string, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+  save(aggregate: T, commitId?: string, callback?: Callback<T>): Promise<T> {
     let savingWithId = commitId;
     return this._partition
       .openStream(aggregate.id, true)

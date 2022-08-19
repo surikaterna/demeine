@@ -1,15 +1,15 @@
 import { Aggregate } from './Aggregate';
 
-export interface AggregateFactory<State extends object = object> {
-  (id: string): Aggregate<State>;
+export interface AggregateFactory<T extends Aggregate> {
+  (id: string): T;
 }
 
-export interface AggregateFactoryCreator<State extends object = object> {
-  (): AggregateFactory<State>;
+export interface AggregateFactoryCreator<T extends Aggregate> {
+  (): AggregateFactory<T>;
 }
 
-export function DefaultFactory<State extends object = object>(aggregateType?: string): AggregateFactory<State> {
+export function DefaultFactory<T extends Aggregate = Aggregate>(aggregateType?: string): AggregateFactory<T> {
   return function() {
-    return new Aggregate<State>();
+    return new Aggregate() as T;
   };
 }
