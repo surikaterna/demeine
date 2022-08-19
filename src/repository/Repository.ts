@@ -1,32 +1,42 @@
-import { v4 as uuid } from 'uuid';
 import Promise from 'bluebird';
-import { DefaultFactory } from '../aggregate/DefaultFactory';
+import { v4 as uuid } from 'uuid';
+import { Aggregate } from '../aggregate';
+import { Event } from '../aggregate/Aggregate.interfaces';
+import { AggregateFactory, DefaultFactory } from '../aggregate/DefaultFactory';
+import { getMessageFromError } from '../utils/errorUtils';
+import { Partition, Stream } from './Partition';
+import { Callback, ConcurrencyStrategy, RepositoryOptions } from './Repository.interfaces';
 
 const LOG = require('slf').Logger.getLogger('demeine:repository');
 
-export class Repository {
-  constructor(partition, aggregateType, factory, concurrencyStrategy, options) {
+export class Repository<State extends object = object, Payload extends object = object> {
+  _partition: Partition<State, Payload>;
+  _factory: AggregateFactory<State>;
+  _aggregateType: string;
+  _resetSnapshotOnFail: boolean;
+  _concurrencyStrategy?: ConcurrencyStrategy<Payload>;
+
+  constructor(partition: Partition<State, Payload>, aggregateType: string, factory: AggregateFactory<State>, concurrencyStrategy?: ConcurrencyStrategy<Payload>, options: RepositoryOptions = {}) {
     this._partition = partition;
-    this._factory = factory || DefaultFactory(aggregateType);
+    this._factory = factory || DefaultFactory<State>(aggregateType);
     this._aggregateType = aggregateType;
     this._concurrencyStrategy = concurrencyStrategy;
-    var opts = options || {};
-    this._resetSnapshotOnFail = 'resetSnapshotOnFail' in opts ? options.resetSnapshotOnFail : true;
+    this._resetSnapshotOnFail = options.resetSnapshotOnFail ?? true;
   }
 
-  findById(id, callback) {
-    LOG.info('%s findById(%s)', this.aggregateType, id);
+  findById(id: string, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+    LOG.info('%s findById(%s)', this._aggregateType, id);
     if (this._partition.queryStreamWithSnapshot !== undefined) {
       return this.findByQueryStreamWithSnapshot(id, false, callback);
     } else if (this._partition.loadSnapshot !== undefined) {
       return this.findBySnapshot(id, false, callback);
     } else {
-      var aggregate = this._factory(id);
+      const aggregate = this._factory(id);
       return this._partition
         .openStream(id)
         .then((stream) => {
-          var events = stream.getCommittedEvents();
-          var version = stream.getVersion();
+          const events = stream.getCommittedEvents();
+          const version = stream.getVersion();
           aggregate._rehydrate(events, version);
           return aggregate;
         })
@@ -34,20 +44,29 @@ export class Repository {
     }
   }
 
-  findBySnapshot(id, isRetry, callback) {
-    LOG.info('%s findBySnapshot(%s)', this.aggregateType, id);
+  findBySnapshot(id: string, isRetry: boolean, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+    LOG.info('%s findBySnapshot(%s)', this._aggregateType, id);
+    const loadSnapshot = this._partition.loadSnapshot?.bind(this._partition);
+    const queryStream = this._partition.queryStream?.bind(this._partition);
+
+    if (!loadSnapshot) {
+      throw new Error('Trying to find aggregate by snapshot, but partition is missing "loadSnapshot" method.');
+    }
+
+    if (!queryStream) {
+      throw new Error('Trying to find aggregate by snapshot, but partition is missing "queryStream" method.');
+    }
+
     const aggregate = this._factory(id);
-    return this._partition
-      .loadSnapshot(id)
-      .then((snapshot) => {
-        return this._partition.queryStream(id, (snapshot && snapshot.version) || 0).then((commits) => {
-          let events = [];
-          commits.forEach((commit) => {
-            events = events.concat(commit.events);
-          });
-          const version = ((snapshot && snapshot.version) || 0) + events.length;
+    return loadSnapshot(id)
+      .then((aggregateSnapshot) => {
+        const version = aggregateSnapshot?.version ?? 0;
+        const snapshot = aggregateSnapshot?.snapshot;
+        return queryStream(id, version).then((commits) => {
+          const events = commits.flatMap((commit) => commit.events);
+          const newVersion = version + events.length;
           try {
-            aggregate._rehydrate(events, version, snapshot && snapshot.snapshot);
+            aggregate._rehydrate(events, newVersion, snapshot);
           } catch (e) {
             if (this._partition.removeSnapshot && this._resetSnapshotOnFail && !isRetry) {
               // check if this is a retry to prevent infinite loop
@@ -65,23 +84,26 @@ export class Repository {
       .nodeify(callback);
   }
 
-  findByQueryStreamWithSnapshot(id, isRetry, callback) {
-    LOG.info('%s findByQueryStreamWithSnapshot(%s)', this.aggregateType, id);
+  findByQueryStreamWithSnapshot(id: string, isRetry: boolean, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+    LOG.info('%s findByQueryStreamWithSnapshot(%s)', this._aggregateType, id);
+
+    const queryStreamWithSnapshot = this._partition.queryStreamWithSnapshot?.bind(this._partition);
+
+    if (!queryStreamWithSnapshot) {
+      throw new Error('Trying to find aggregate by query stream with snapshot, but partition is missing "queryStreamWithSnapshot" method.');
+    }
+
     const aggregate = this._factory(id);
-    return this._partition
-      .queryStreamWithSnapshot(id)
+    return queryStreamWithSnapshot(id)
       .then((response) => {
-        var commits = response.commits;
-        var snapshot = response.snapshot;
-        var events = [];
-        if (commits) {
-          commits.forEach((commit) => {
-            events = events.concat(commit.events);
-          });
-        }
-        var version = ((snapshot && snapshot.version) || 0) + events.length;
+        const commits = response.commits;
+        const aggregateSnapshot = response.snapshot;
+        const snapshot = aggregateSnapshot?.snapshot;
+        const events = commits.flatMap((commit) => commit.events);
+        const newVersion = (aggregateSnapshot?.version ?? 0) + events.length;
+
         try {
-          aggregate._rehydrate(events, version, snapshot && snapshot.snapshot);
+          aggregate._rehydrate(events, newVersion, snapshot);
         } catch (e) {
           if (this._partition.removeSnapshot && this._resetSnapshotOnFail && !isRetry) {
             // check if this is a retry to prevent infinite loop
@@ -98,30 +120,30 @@ export class Repository {
       .nodeify(callback);
   }
 
-  findEventsById(id, callback) {
-    LOG.info('%s findEventsById(%s)', this.aggregateType, id);
+  findEventsById(id: string, callback: Callback<Array<Event<Payload>>>): Promise<Array<Event<Payload>>> {
+    LOG.info('%s findEventsById(%s)', this._aggregateType, id);
     return this._partition
       .openStream(id)
       .then((stream) => stream.getCommittedEvents())
       .nodeify(callback);
   }
 
-  checkConcurrencyStrategy(aggregate, stream, uncommittedEvents) {
-    var isNewStream = stream._version === -1;
-    var shouldThrow = false;
+  checkConcurrencyStrategy(aggregate: Aggregate<State>, stream: Stream<Payload>, uncommittedEvents: Array<Event<Payload>>): Promise<boolean> {
+    const isNewStream = stream._version === -1;
+    let shouldThrow = false;
     return new Promise((resolve) => {
       if (!isNewStream && this._concurrencyStrategy) {
-        var numberOfEvents = uncommittedEvents.length;
-        var nextStreamVersion = stream._version + numberOfEvents;
+        const numberOfEvents = uncommittedEvents.length;
+        const nextStreamVersion = stream._version + numberOfEvents;
         if (nextStreamVersion > aggregate._version) {
           // if _concurrencyStrategy has two arguments, we need to load up all events, since client requested it.
-          var writeOnly = this._concurrencyStrategy ? this._concurrencyStrategy.length < 2 : true;
+          const writeOnly = this._concurrencyStrategy ? this._concurrencyStrategy.length < 2 : true;
           if (writeOnly) {
             shouldThrow = this._concurrencyStrategy(uncommittedEvents);
             resolve(shouldThrow);
           } else {
             this._partition.openStream(aggregate.id, false).then((newStream) => {
-              shouldThrow = this._concurrencyStrategy(uncommittedEvents, newStream.getCommittedEvents());
+              shouldThrow = this._concurrencyStrategy ? this._concurrencyStrategy(uncommittedEvents, newStream.getCommittedEvents()) : shouldThrow;
               resolve(shouldThrow);
             });
           }
@@ -134,7 +156,7 @@ export class Repository {
     });
   }
 
-  _getDeleteEvent(events) {
+  _getDeleteEvent(events: Array<Event<Payload>>): Event<Payload> | null {
     for (let i = 0; i < events.length; i++) {
       if (events[i].type === '$stream.deleted.event') {
         return events[i];
@@ -143,22 +165,22 @@ export class Repository {
     return null;
   }
 
-  _delete(aggregate, deleteEvent) {
+  _delete(aggregate: Aggregate<State>, deleteEvent: Event<Payload>): Promise<Aggregate<State>> {
     return this._partition.delete(aggregate.id, deleteEvent);
   }
 
-  save(aggregate, commitId, callback) {
-    var savingWithId = commitId;
+  save(aggregate: Aggregate<State>, commitId: string, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+    let savingWithId = commitId;
     return this._partition
       .openStream(aggregate.id, true)
       .then((stream) => {
-        return aggregate.getUncommittedEventsAsync().then((uncommittedEvents) => {
-          var deleteEvent = this._getDeleteEvent(uncommittedEvents);
+        return aggregate.getUncommittedEventsAsync<Payload>().then((uncommittedEvents) => {
+          const deleteEvent = this._getDeleteEvent(uncommittedEvents);
           if (deleteEvent) {
             return this._delete(aggregate, deleteEvent);
           } else {
-            var startAggregateVersion = aggregate.getVersion() - uncommittedEvents.length;
-            var startStreamVersion = stream._version;
+            const startAggregateVersion = aggregate.getVersion() - uncommittedEvents.length;
+            const startStreamVersion = stream._version;
             return this.checkConcurrencyStrategy(aggregate, stream, uncommittedEvents).then((shouldThrow) => {
               if (shouldThrow === true) {
                 throw new Error('Concurrency error. Version mismatch on stream');
@@ -196,12 +218,15 @@ export class Repository {
                   }
                   return aggregate;
                 })
-                .error((e) => {
+                .error((err) => {
                   LOG.debug(
-                    'Unable to save commmit id: ' + savingWithId + ' for type: ' + this.aggregateType + ', with ' + uncommittedEvents.length + ' events.',
-                    e
+                    'Unable to save commit id: %s for type: %s, with %d events. Error: %s',
+                    savingWithId,
+                    this._aggregateType,
+                    uncommittedEvents.length,
+                    getMessageFromError(err)
                   );
-                  throw e;
+                  throw err;
                 });
             });
           }

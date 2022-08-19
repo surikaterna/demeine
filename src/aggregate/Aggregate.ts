@@ -19,7 +19,7 @@ function _promise<T>(result?: globalThis.Promise<T>, warning?: string): globalTh
 }
 
 export class Aggregate<State extends object = object> {
-  id?: string;
+  id: string;
   type?: string;
   _uncommittedEvents: Array<Event>;
   _commandHandler: CommandHandler;
@@ -41,6 +41,7 @@ export class Aggregate<State extends object = object> {
     this._version = 0;
     this._commandQueue = new Queue();
     this._state = {} as State;
+    this.id = uuid();
   }
 
   _rehydrate(events: Array<Event>, version?: number, snapshot?: State): void {
