@@ -1,7 +1,7 @@
 import Promise from 'bluebird';
 import { Aggregate } from '../../aggregate';
 import { Event } from '../../aggregate/Aggregate.interfaces';
-import { AggregateSnapshot, Partition } from '../Partition';
+import { AggregateSnapshot, Partition } from '../Partition.interfaces';
 import { Callback, Commit } from '../Repository.interfaces';
 import { SnapshotStream } from './SnapshotStream';
 

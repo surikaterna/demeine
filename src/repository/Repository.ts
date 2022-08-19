@@ -4,7 +4,7 @@ import { Aggregate } from '../aggregate';
 import { Event } from '../aggregate/Aggregate.interfaces';
 import { AggregateFactory, DefaultFactory } from '../aggregate/DefaultFactory';
 import { getMessageFromError } from '../utils/errorUtils';
-import { Partition, Stream } from './Partition';
+import { Partition, Stream } from './Partition.interfaces';
 import { Callback, ConcurrencyStrategy, RepositoryOptions } from './Repository.interfaces';
 
 const LOG = require('slf').Logger.getLogger('demeine:repository');

@@ -1,6 +1,6 @@
 import Promise from 'bluebird';
 import { Event } from '../../aggregate/Aggregate.interfaces';
-import { Stream } from '../Partition';
+import { Stream } from '../Partition.interfaces';
 import { Commit } from '../Repository.interfaces';
 
 export class BasicStream implements Stream {

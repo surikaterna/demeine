@@ -3,6 +3,7 @@
   "version": "0.3.13",
   "description": "DDDD - Distributed Domain Driven Design",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "build": "rimraf lib && concurrently \"npm run build:src\" \"npm run build:types\"",
     "build:watch": "rimraf lib && concurrently \"npm run build:src:watch\" \"npm run build:types:watch\"",
