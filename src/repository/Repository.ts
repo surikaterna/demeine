@@ -16,7 +16,7 @@ export class Repository<State extends object = object, Payload extends object = 
   _resetSnapshotOnFail: boolean;
   _concurrencyStrategy?: ConcurrencyStrategy<Payload>;
 
-  constructor(partition: Partition<State, Payload>, aggregateType: string, factory: AggregateFactory<State>, concurrencyStrategy?: ConcurrencyStrategy<Payload>, options: RepositoryOptions = {}) {
+  constructor(partition: Partition<State, Payload>, aggregateType: string, factory?: AggregateFactory<State>, concurrencyStrategy?: ConcurrencyStrategy<Payload>, options: RepositoryOptions = {}) {
     this._partition = partition;
     this._factory = factory || DefaultFactory<State>(aggregateType);
     this._aggregateType = aggregateType;
@@ -24,7 +24,7 @@ export class Repository<State extends object = object, Payload extends object = 
     this._resetSnapshotOnFail = options.resetSnapshotOnFail ?? true;
   }
 
-  findById(id: string, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+  findById(id: string, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
     LOG.info('%s findById(%s)', this._aggregateType, id);
     if (this._partition.queryStreamWithSnapshot !== undefined) {
       return this.findByQueryStreamWithSnapshot(id, false, callback);
@@ -44,7 +44,7 @@ export class Repository<State extends object = object, Payload extends object = 
     }
   }
 
-  findBySnapshot(id: string, isRetry: boolean, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+  findBySnapshot(id: string, isRetry: boolean, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
     LOG.info('%s findBySnapshot(%s)', this._aggregateType, id);
     const loadSnapshot = this._partition.loadSnapshot?.bind(this._partition);
     const queryStream = this._partition.queryStream?.bind(this._partition);
@@ -84,7 +84,7 @@ export class Repository<State extends object = object, Payload extends object = 
       .nodeify(callback);
   }
 
-  findByQueryStreamWithSnapshot(id: string, isRetry: boolean, callback: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
+  findByQueryStreamWithSnapshot(id: string, isRetry: boolean, callback?: Callback<Aggregate<State>>): Promise<Aggregate<State>> {
     LOG.info('%s findByQueryStreamWithSnapshot(%s)', this._aggregateType, id);
 
     const queryStreamWithSnapshot = this._partition.queryStreamWithSnapshot?.bind(this._partition);
