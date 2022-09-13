@@ -1,3 +1,6 @@
+# Compiled source files
+lib
+
 # Logs
 logs
 *.log

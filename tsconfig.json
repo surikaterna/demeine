@@ -1,0 +1,26 @@
+{
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
+  "compilerOptions": {
+    "module": "commonjs",
+    "lib": [
+      "esnext"
+    ],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "rootDir": "./src",
+    "outDir": "./lib",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "types": [
+      "node",
+      "jest"
+    ],
+    "skipLibCheck": true
+  }
+}
