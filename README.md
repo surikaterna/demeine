@@ -7,21 +7,19 @@ demeine
 * [Installation](#installation)
 * [Usage](#usage)
 * [Components](#components)
-    * [Aggregate](#aggregate)
-        * [Aggregate Methods](#aggregate-methods)
-          * [clearUncommittedEvents](#clearuncommittedevents)
-          * [delete](#delete)
-          * [getUncommittedEvents](#getuncommittedevents)
-          * [getUncommittedEventsAsync](#getuncommittedeventsasync)
-          * [getVersion](#getversion)
-    * [Repository](#repository)
-        * [Repository Methods](#repository-methods)
-          * [checkConcurrencyStrategy](#checkconcurrencystrategy)
-          * [findById](#findbyid)
-          * [findByQueryStreamWithSnapshot](#findbyquerystreamwithsnapshot)
-          * [findBySnapshot](#findbysnapshot)
-          * [findEventsById](#findeventsbyid)
-          * [save](#save)
+  * [Aggregate](#aggregate)
+    * [clearUncommittedEvents](#clearuncommittedevents)
+    * [delete](#delete)
+    * [getUncommittedEvents](#getuncommittedevents)
+    * [getUncommittedEventsAsync](#getuncommittedeventsasync)
+    * [getVersion](#getversion)
+  * [Repository](#repository)
+    * [checkConcurrencyStrategy](#checkconcurrencystrategy)
+    * [findById](#findbyid)
+    * [findByQueryStreamWithSnapshot](#findbyquerystreamwithsnapshot)
+    * [findBySnapshot](#findbysnapshot)
+    * [findEventsById](#findeventsbyid)
+    * [save](#save)
 
 ## Purpose
 
@@ -122,58 +120,154 @@ const existingUser = await userRepository.findById('123');
 
 ### Aggregate
 
+Base class for aggregate classes representing domain concepts.
 
+#### clearUncommittedEvents
 
-#### Aggregate Methods
+Remove the events created through calling the aggregate methods.
 
+Is used in the [`save`](#save) method on the Repository in order to remove local events after they've been committed.
 
+```typescript
+const user = await userRepository.findById('123');
 
-##### clearUncommittedEvents
+// Adds `user.registered.event` to uncommitted events
+await user.register('123', 'Jeff');
+// Removes the `registered` event
+await user.clearUncommittedEvents();
 
+await userRepository.save(user);
+```
 
+#### delete
 
-##### delete
+Creates a `$stream.deleted.event` for the aggregate, which the persistence partition should handle by removing the
+aggregate data.
 
+```typescript
+const user = await userRepository.findById('123');
+await user.delete();
+await userRepository.save(user);
 
+// Should not exist anymore
+const nonExistingUser = await userRepository.findById('123');
+```
 
-##### getUncommittedEvents
+#### getUncommittedEvents
 
+Retrieves the list of events created by calling aggregate methods. Prefer to use the async version, as this will
+throw if there are unprocessed commands.
 
+```typescript
+const user = await userRepository.findById('123');
+await user.register('123', 'Jeff');
+await user.registerEmail('jeff@21jumpstreet.us');
 
-##### getUncommittedEventsAsync
+// [ Event { type: 'user.registered.event' }, Event { type: 'user.email.registered.event' }]
+const events = user.getUncommittedEvents();
+```
 
+#### getUncommittedEventsAsync
 
+Retrieves the uncommitted events as soon as the processing queue is empty.
 
-##### getVersion
+```typescript
+const user = await userRepository.findById('123');
+await user.register('123', 'Jeff');
+await user.registerEmail('jeff@21jumpstreet.us');
 
+// [ Event { type: 'user.registered.event' }, Event { type: 'user.email.registered.event' }]
+const events = await user.getUncommittedEventsAsync();
+```
 
+#### getVersion
+
+Retrieves the version of the aggregate, including increments for the processed uncommitted events.
+
+```typescript
+const user = await userRepository.findById('123');
+// -1, non existing
+const initialVersion = user.getVersion();
+
+await user.register('123', 'Jeff');
+await user.registerEmail('jeff@21jumpstreet.us');
+
+// 2, set to 0 for initial + 2 increments for the events
+const newVersion = user.getVersion();
+```
 
 ### Repository
 
 You will need to provide a Partition to the Repository.
 
-#### Repository Methods
+#### checkConcurrencyStrategy
 
-##### checkConcurrencyStrategy
+Checks the concurrency strategy provided in the Repository constructor. Returns a Promise with a boolean stating whether
+it should throw an error or not. Defaults to resolving `false` if no concurrency strategy was provided.
 
+Is used in the [`save`](#save) method on the Repository in order to throw a concurrency error when there's a version
+mismatch.
 
+```typescript
+const user = await userRepository.findById('123');
+const initialVersion = user.getVersion();
 
-##### findById
+await user.register('123', 'Jeff');
+await user.registerEmail('jeff@21jumpstreet.us');
 
+// 2, set to 0 for initial + 2 increments for the events
+const newVersion = user.getVersion();
+```
 
+#### findById
 
-##### findByQueryStreamWithSnapshot
+Will look up an Aggregate in the Partition provided to the Repository by the aggregate's ID.
 
+```typescript
+const user = await userRepository.findById('123');
+```
 
+#### findByQueryStreamWithSnapshot
 
-##### findBySnapshot
+Will create a rehydrated aggregate by looking up the events for a stream, and processing them. Returns the rehydrated
+aggregate.
 
+Requires the persistence partition to implement `queryStreamWithSnapshot`.
 
+```typescript
+const user = await userRepository.findById('123');
+```
 
-##### findEventsById
+#### findBySnapshot
 
+Will look up a snapshot for the aggregate and  Will create a rehydrated aggregate by looking up the events for a stream, and processing them. Returns the rehydrated
+aggregate.
 
+Requires the persistence partition to implement `loadSnapshot` & `queryStream`.
 
-##### save
+```typescript
+const user = await userRepository.findById('123');
+```
 
+#### findEventsById
 
+Retrieves the committed (processed) events for the aggregate stream by the aggregate's ID.
+
+```typescript
+// [{ type: 'user.registered.event' }. { type: 'user.email.registered.event' }]
+const events = await userRepository.findEventsById('123');
+```
+
+#### save
+
+Persists the aggregate including executed commands to the persistence partition.
+
+```typescript
+// { id: '123', contact: [] }
+const user = await userRepository.findById('123');
+await user.registerEmail('jeff@21jumpstreet.us');
+await userRepository.save(user);
+
+// { id: '123', contact: [{ value: 'jeff@21jumpstreet.us', type: 'email' }] }
+const updatedUser = await userRepository.findById('123');
+```
