@@ -34,10 +34,10 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
       const aggregate = this._factory(id);
       return this._partition
         .openStream(id)
-        .then((stream) => {
+        .then(async (stream) => {
           const events = stream.getCommittedEvents();
           const version = stream.getVersion();
-          aggregate._rehydrate(events, version);
+          await aggregate._rehydrate(events, version);
           return aggregate;
         })
         .nodeify(callback);
@@ -62,11 +62,11 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
       .then((aggregateSnapshot) => {
         const version = aggregateSnapshot?.version ?? 0;
         const snapshot = aggregateSnapshot?.snapshot;
-        return queryStream(id, version).then((commits) => {
+        return queryStream(id, version).then(async (commits) => {
           const events = commits.flatMap((commit) => commit.events);
           const newVersion = version + events.length;
           try {
-            aggregate._rehydrate(events, newVersion, snapshot);
+            await aggregate._rehydrate(events, newVersion, snapshot);
           } catch (e) {
             if (this._partition.removeSnapshot && this._resetSnapshotOnFail && !isRetry) {
               // check if this is a retry to prevent infinite loop
@@ -95,7 +95,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
 
     const aggregate = this._factory(id);
     return queryStreamWithSnapshot(id)
-      .then((response) => {
+      .then(async (response) => {
         const commits = response.commits;
         const aggregateSnapshot = response.snapshot;
         const snapshot = aggregateSnapshot?.snapshot;
@@ -103,7 +103,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
         const newVersion = (aggregateSnapshot?.version ?? 0) + events.length;
 
         try {
-          aggregate._rehydrate(events, newVersion, snapshot);
+          await aggregate._rehydrate(events, newVersion, snapshot);
         } catch (e) {
           if (this._partition.removeSnapshot && this._resetSnapshotOnFail && !isRetry) {
             // check if this is a retry to prevent infinite loop
