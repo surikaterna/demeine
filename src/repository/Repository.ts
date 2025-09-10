@@ -98,7 +98,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
         const commits = response.commits;
         const aggregateSnapshot = response.snapshot;
         const snapshot = aggregateSnapshot?.snapshot;
-        const events = commits.flatMap((commit) => commit.events);
+        const events = commits?.flatMap((commit) => commit.events) ?? [];
         const newVersion = (aggregateSnapshot?.version ?? 0) + events.length;
 
         try {
