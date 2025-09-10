@@ -17,6 +17,19 @@ function _promise<T>(result?: globalThis.Promise<T>, warning?: string): globalTh
   }
   return result;
 }
+/**
+ * Yields control back to the event loop, allowing other pending tasks to run.
+ * Uses setImmediate in Node.js and setTimeout in the browser.
+ */
+function yieldToEventLoop() {
+  return new Promise(resolve => {
+    if (typeof setImmediate === 'function') {
+      setImmediate(resolve);
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
 
 export class Aggregate<State extends object = object> {
   id: string;
@@ -44,7 +57,7 @@ export class Aggregate<State extends object = object> {
     this.id = uuid();
   }
 
-  _rehydrate(events: Array<Event>, version?: number, snapshot?: State): void {
+  async _rehydrate(events: Array<Event>, version?: number, snapshot?: State): Promise<void> {
     LOG.info('rehydrating aggregate with %d events to version %d has snapshot %s', events.length, version, snapshot !== undefined);
     // do another way?
     if (snapshot) {
@@ -52,6 +65,10 @@ export class Aggregate<State extends object = object> {
     }
     for (let i = 0; i < events.length; i++) {
       this._apply(events[i], false);
+      // Let the event loop breathe
+      if (i % 100 === 0) {
+        await yieldToEventLoop();
+      }
     }
     this._version = version || this._version;
   }
