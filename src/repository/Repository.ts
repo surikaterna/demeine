@@ -1,4 +1,3 @@
-import Promise from 'bluebird';
 import { v4 as uuid } from 'uuid';
 import { Aggregate } from '../aggregate';
 import { Event } from '../aggregate/Aggregate.interfaces';
