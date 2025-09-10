@@ -1,7 +1,7 @@
 import { getMessageFromError } from '../utils/errorUtils';
 import { Command, CommandHandler, CommandSink, Event, EventHandler } from './Aggregate.interfaces';
 import { Queue } from '../queue/Queue';
-import Promise from 'bluebird';
+import BluebirdPromise from 'bluebird';
 import { LoggerFactory } from 'slf';
 import { v4 as uuid } from 'uuid';
 import { DefaultEventHandler } from './DefaultEventHandler';
@@ -100,7 +100,7 @@ export class Aggregate<State extends object = object> {
 
   _process(command: Command): Promise<Aggregate<State>> {
     LOG.info('processing command %j', command);
-    return new Promise((resolve, reject) => {
+    return new BluebirdPromise((resolve, reject) => {
       try {
         const handler = this._commandHandler.handle(this, command);
         resolve(handler);
