@@ -32,7 +32,6 @@
     "domain",
     "cqrs"
   ],
-  "prettier": "prettier-config-surikaterna",
   "author": "Surikat AB",
   "license": "MIT",
   "devDependencies": {
