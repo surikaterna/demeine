@@ -15,7 +15,13 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
   _resetSnapshotOnFail: boolean;
   _concurrencyStrategy?: ConcurrencyStrategy<Payload>;
 
-  constructor(partition: Partition<T, Payload>, aggregateType: string, factory?: AggregateFactory<T>, concurrencyStrategy?: ConcurrencyStrategy<Payload>, options: RepositoryOptions = {}) {
+  constructor(
+    partition: Partition<T, Payload>,
+    aggregateType: string,
+    factory?: AggregateFactory<T>,
+    concurrencyStrategy?: ConcurrencyStrategy<Payload>,
+    options: RepositoryOptions = {}
+  ) {
     this._partition = partition;
     this._factory = factory || DefaultFactory<T>(aggregateType);
     this._aggregateType = aggregateType;
