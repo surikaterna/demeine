@@ -26,11 +26,14 @@ export class Location extends Aggregate<LocationState> {
   }
 
   processRegisterName(command: Command<RegisterNamePayload>) {
-    return this._apply({
-      type: 'location.registered_name.event',
-      payload: command.payload,
-      aggregateId: '1'
-    }, true);
+    return this._apply(
+      {
+        type: 'location.registered_name.event',
+        payload: command.payload,
+        aggregateId: '1'
+      },
+      true
+    );
   }
 
   applyRegisteredName(event: Event<RegisterNamePayload>) {
@@ -46,11 +49,14 @@ export class Location extends Aggregate<LocationState> {
   }
 
   processChangeName(command: Command<RegisterNamePayload>) {
-    return this._apply({
-      type: 'location.changed_name.event',
-      payload: command.payload,
-      aggregateId: '1'
-    }, true);
+    return this._apply(
+      {
+        type: 'location.changed_name.event',
+        payload: command.payload,
+        aggregateId: '1'
+      },
+      true
+    );
   }
 
   applyChangedName(event: Event<RegisterNamePayload>) {
@@ -75,11 +81,14 @@ export class Location extends Aggregate<LocationState> {
   }
 
   processChangeNameAsync(command: Command<RegisterNamePayload>) {
-    return this._apply({
-      type: 'location.changed_name.event',
-      payload: command.payload,
-      aggregateId: '1'
-    }, true);
+    return this._apply(
+      {
+        type: 'location.changed_name.event',
+        payload: command.payload,
+        aggregateId: '1'
+      },
+      true
+    );
   }
 
   applyChangedNameAsync(event: Event<RegisterNamePayload>) {
@@ -99,11 +108,14 @@ export class Location extends Aggregate<LocationState> {
       throw new Error('Failing early');
     }
     return new Promise((resolve, reject) => {
-      this._apply({
-        type: 'location.changed_name.event',
-        payload: command.payload,
-        aggregateId: '1'
-      }, true);
+      this._apply(
+        {
+          type: 'location.changed_name.event',
+          payload: command.payload,
+          aggregateId: '1'
+        },
+        true
+      );
       reject(new Error('uh oh'));
     });
   }

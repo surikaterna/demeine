@@ -24,11 +24,13 @@ describe('Repository', () => {
 
     it('hydrates aggregates with snapshot', async () => {
       const repository = new Repository<Location>(
-        new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [{
-          id: '1',
-          type: 'location.registered_name.event',
-          payload: { name: 'Hello' }
-        }]),
+        new SnapshotPartition({ id: '1', version: 1, snapshot: { name: 'hello' } }, [
+          {
+            id: '1',
+            type: 'location.registered_name.event',
+            payload: { name: 'Hello' }
+          }
+        ]),
         'location',
         factory
       );
@@ -57,12 +59,14 @@ describe('Repository', () => {
 
     it('hydrates aggregates without snapshot', async () => {
       const repository = new Repository<Location>(
-        new SnapshotPartition(undefined, [{
-          id: '1',
-          aggregateId: '1',
-          type: 'location.registered_name.event',
-          payload: { name: 'Hello' }
-        }]),
+        new SnapshotPartition(undefined, [
+          {
+            id: '1',
+            aggregateId: '1',
+            type: 'location.registered_name.event',
+            payload: { name: 'Hello' }
+          }
+        ]),
         'location',
         factory
       );

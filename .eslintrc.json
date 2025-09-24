@@ -1,9 +1,0 @@
-{
-  "extends": "surikat",
-  "rules": {
-    "@typescript-eslint/no-use-before-define": ["error", {
-      "functions": false,
-      "variables": false
-    }]
-  }
-}

@@ -22,7 +22,7 @@ function _promise<T>(result?: globalThis.Promise<T>, warning?: string): globalTh
  * Uses setImmediate in Node.js and setTimeout in the browser.
  */
 function yieldToEventLoop() {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     if (typeof setImmediate === 'function') {
       setImmediate(resolve);
     } else {
@@ -44,11 +44,11 @@ export class Aggregate<State extends object = object> {
 
   constructor(commandSink?: CommandSink<State>, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
     this._uncommittedEvents = [];
-    this._commandSink = commandSink || ({
+    this._commandSink = commandSink || {
       sink: (cmd: Command) => {
         return this._process(cmd);
       }
-    });
+    };
     this._eventHandler = eventHandler || new DefaultEventHandler();
     this._commandHandler = commandHandler || new DefaultCommandHandler();
     this._version = 0;
@@ -159,8 +159,7 @@ export class Aggregate<State extends object = object> {
     );
   }
 
-  applyDeleted(): void {
-  }
+  applyDeleted(): void {}
 
   getVersion(): number {
     return this._version;
