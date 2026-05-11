@@ -1,4 +1,3 @@
-import Promise from 'bluebird';
 import { Aggregate } from '../aggregate';
 import { Event } from '../aggregate/Aggregate.interfaces';
 import { Callback, Commit } from './Repository.interfaces';

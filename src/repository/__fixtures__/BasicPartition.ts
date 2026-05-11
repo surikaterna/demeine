@@ -1,4 +1,3 @@
-import Promise from 'bluebird';
 import { Aggregate } from '../../aggregate';
 import { Event } from '../../aggregate/Aggregate.interfaces';
 import { Partition, Stream } from '../Partition.interfaces';

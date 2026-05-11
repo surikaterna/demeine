@@ -1,6 +1,6 @@
-import Promise from 'bluebird';
 import { Aggregate } from '../../aggregate';
 import { Event } from '../../aggregate/Aggregate.interfaces';
+import { nodeify } from '../../utils/nodeify';
 import { AggregateSnapshot, Partition } from '../Partition.interfaces';
 import { Callback, Commit } from '../Repository.interfaces';
 import { SnapshotStream } from './SnapshotStream';
@@ -55,6 +55,6 @@ export class SnapshotPartition<T extends Aggregate = Aggregate> implements Parti
         result[0].events = result[0].events.slice(result[0].events.length - tooMany);
       }
     }
-    return Promise.resolve(result).nodeify(callback);
+    return nodeify(Promise.resolve(result), callback);
   }
 }

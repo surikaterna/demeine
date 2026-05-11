@@ -3,6 +3,7 @@ import { Aggregate } from '../aggregate';
 import { Event } from '../aggregate/Aggregate.interfaces';
 import { AggregateFactory, DefaultFactory } from '../aggregate/DefaultFactory';
 import { getMessageFromError } from '../utils/errorUtils';
+import { nodeify } from '../utils/nodeify';
 import { Partition, Stream } from './Partition.interfaces';
 import { Callback, ConcurrencyStrategy, RepositoryOptions } from './Repository.interfaces';
 
@@ -33,20 +34,21 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
     LOG.info('%s findById(%s)', this._aggregateType, id);
     if (this._partition.queryStreamWithSnapshot !== undefined) {
       return this.findByQueryStreamWithSnapshot(id, false, callback);
-    } else if (this._partition.loadSnapshot !== undefined) {
-      return this.findBySnapshot(id, false, callback);
-    } else {
-      const aggregate = this._factory(id);
-      return this._partition
-        .openStream(id)
-        .then(async (stream) => {
-          const events = stream.getCommittedEvents();
-          const version = stream.getVersion();
-          await aggregate._rehydrate(events, version);
-          return aggregate;
-        })
-        .nodeify(callback);
     }
+
+    if (this._partition.loadSnapshot !== undefined) {
+      return this.findBySnapshot(id, false, callback);
+    }
+
+    const aggregate = this._factory(id);
+    const result = this._partition.openStream(id).then(async (stream) => {
+      const events = stream.getCommittedEvents();
+      const version = stream.getVersion();
+      await aggregate._rehydrate(events, version);
+      return aggregate;
+    });
+
+    return nodeify(result, callback);
   }
 
   findBySnapshot(id: string, isRetry: boolean, callback?: Callback<T>): Promise<T> {
@@ -63,7 +65,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
     }
 
     const aggregate = this._factory(id);
-    return loadSnapshot(id)
+    const result = loadSnapshot(id)
       .then((aggregateSnapshot) => {
         const version = aggregateSnapshot?.version ?? 0;
         const snapshot = aggregateSnapshot?.snapshot;
@@ -85,8 +87,9 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
           }
           return aggregate;
         });
-      })
-      .nodeify(callback);
+      });
+
+    return nodeify(result, callback);
   }
 
   findByQueryStreamWithSnapshot(id: string, isRetry: boolean, callback?: Callback<T>): Promise<T> {
@@ -99,7 +102,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
     }
 
     const aggregate = this._factory(id);
-    return queryStreamWithSnapshot(id)
+    const result = queryStreamWithSnapshot(id)
       .then(async (response) => {
         const commits = response.commits;
         const aggregateSnapshot = response.snapshot;
@@ -121,16 +124,18 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
           }
         }
         return aggregate;
-      })
-      .nodeify(callback);
+      });
+
+    return nodeify(result, callback);
   }
 
   findEventsById(id: string, callback: Callback<Array<Event<Payload>>>): Promise<Array<Event<Payload>>> {
     LOG.info('%s findEventsById(%s)', this._aggregateType, id);
-    return this._partition
+    const result = this._partition
       .openStream(id)
-      .then((stream) => stream.getCommittedEvents())
-      .nodeify(callback);
+      .then((stream) => stream.getCommittedEvents());
+
+    return nodeify(result, callback);
   }
 
   checkConcurrencyStrategy(aggregate: T, stream: Stream<Payload>, uncommittedEvents: Array<Event<Payload>>): Promise<boolean> {
@@ -176,7 +181,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
 
   save(aggregate: T, commitId?: string, callback?: Callback<T>): Promise<T> {
     let savingWithId = commitId;
-    return this._partition
+    const result = this._partition
       .openStream(aggregate.id, true)
       .then((stream) => {
         return aggregate.getUncommittedEventsAsync<Payload>().then((uncommittedEvents) => {
@@ -223,7 +228,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
                   }
                   return aggregate;
                 })
-                .error((err) => {
+                .catch((err) => {
                   LOG.debug(
                     'Unable to save commit id: %s for type: %s, with %d events. Error: %s',
                     savingWithId,
@@ -236,7 +241,8 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
             });
           }
         });
-      })
-      .nodeify(callback);
+      });
+
+    return nodeify(result, callback);
   }
 }

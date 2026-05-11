@@ -1,7 +1,6 @@
 import { getMessageFromError } from '../utils/errorUtils';
 import { Command, CommandHandler, CommandSink, Event, EventHandler } from './Aggregate.interfaces';
 import { Queue } from '../queue/Queue';
-import BluebirdPromise from 'bluebird';
 import { LoggerFactory } from 'slf';
 import { v4 as uuid } from 'uuid';
 import { DefaultEventHandler } from './DefaultEventHandler';
@@ -35,14 +34,14 @@ export class Aggregate<State extends object = object> {
   id: string;
   type?: string;
   _uncommittedEvents: Array<Event>;
-  _commandHandler: CommandHandler;
+  _commandHandler: CommandHandler<State>;
   _commandSink: CommandSink<State>;
-  _eventHandler: EventHandler;
+  _eventHandler: EventHandler<State>;
   _version: number;
   _commandQueue: Queue;
   _state: State;
 
-  constructor(commandSink?: CommandSink<State>, eventHandler?: EventHandler, commandHandler?: CommandHandler) {
+  constructor(commandSink?: CommandSink<State>, eventHandler?: EventHandler<State>, commandHandler?: CommandHandler<State>) {
     this._uncommittedEvents = [];
     this._commandSink = commandSink || {
       sink: (cmd: Command) => {
@@ -98,20 +97,15 @@ export class Aggregate<State extends object = object> {
     return this;
   }
 
-  _process(command: Command): Promise<Aggregate<State>> {
+  async _process(command: Command): Promise<Aggregate<State>> {
     LOG.info('processing command %j', command);
-    return new BluebirdPromise((resolve, reject) => {
-      try {
-        const handler = this._commandHandler.handle(this, command);
-        resolve(handler);
-      } catch (error) {
-        reject(error);
-      }
-    }).error((error) => {
+    try {
+      return this._commandHandler.handle(this, command);
+    } catch (error) {
       LOG.error('Failed to process command %j. Error: %s', command, getMessageFromError(error));
       this.clearUncommittedEvents();
       throw error;
-    });
+    }
   }
 
   _sink(commandToSink: MaybePromise<Command>): globalThis.Promise<Aggregate<State> | true> {
