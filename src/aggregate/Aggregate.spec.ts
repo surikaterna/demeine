@@ -38,11 +38,9 @@ describe('Aggregate', () => {
   });
 
   describe('#<promise> domain function', () => {
-    it('should wait for promise', (done) => {
+    it('should wait for promise', async () => {
       const location = new Location();
-      location.registerName('test').then(() => {
-        done();
-      });
+      await location.registerName('test');
     });
 
     it('should return promise error when failure in process', async () => {
@@ -55,7 +53,7 @@ describe('Aggregate', () => {
 
     it('should return promise error when failure in process by throwing', async () => {
       const location = new Location();
-      expect(location.failName('fail early')).rejects.toThrow('Failing early');
+      await expect(location.failName('fail early')).rejects.toThrow('Failing early');
 
       const events = await location.getUncommittedEventsAsync();
       expect(events).toHaveLength(0);

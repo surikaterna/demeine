@@ -19,7 +19,7 @@
     "emitDeclarationOnly": true,
     "types": [
       "node",
-      "jest"
+      "vitest/globals"
     ],
     "skipLibCheck": true
   }
