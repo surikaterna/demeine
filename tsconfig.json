@@ -1,26 +1,18 @@
 {
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
+  "include": ["src"],
+  "exclude": ["node_modules"],
   "compilerOptions": {
     "module": "commonjs",
-    "lib": [
-      "esnext"
-    ],
+    "lib": ["esnext"],
     "moduleResolution": "node",
     "esModuleInterop": true,
     "strict": true,
     "rootDir": "./src",
     "outDir": "./lib",
+    "target": "es5",
     "declaration": true,
-    "emitDeclarationOnly": true,
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
-    "skipLibCheck": true
+    "types": ["node", "vitest/globals"],
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0"
   }
 }

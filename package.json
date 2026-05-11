@@ -5,12 +5,8 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "build": "rimraf lib && concurrently \"npm run build:src\" \"npm run build:types\"",
-    "build:watch": "rimraf lib && concurrently \"npm run build:src:watch\" \"npm run build:types:watch\"",
-    "build:src": "swc src --out-dir lib",
-    "build:src:watch": "npm run build:src -- --watch",
-    "build:types": "tsc",
-    "build:types:watch": "npm run build:types -- --watch",
+    "build": "rimraf lib && tsc",
+    "build:watch": "rimraf lib && tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -36,17 +32,14 @@
   "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "2.2.4",
-    "@swc/cli": "^0.1.57",
-    "@swc/core": "^1.2.237",
     "@types/bluebird": "^3.5.36",
     "@types/node": "^22.19.18",
     "@types/uuid": "^9.0.1",
     "@vitest/coverage-v8": "^4.1.5",
-    "concurrently": "^7.3.0",
     "regenerator-runtime": "^0.13.9",
     "rimraf": "^3.0.2",
     "slf-debug": "^0.2.0",
-    "typescript": "^4.7.4",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   },
   "bugs": {
