@@ -164,7 +164,7 @@ describe('Repository', () => {
     });
   });
 
-  it('removes and retries snapshot but does not end up in loop if not working', () => {
+  it('removes and retries snapshot but does not end up in loop if not working', async () => {
     const repository = new Repository(
       new SnapshotPartition({ id: '1', version: 1, snapshot: { no_name: 'hello' } }, [
         { id: '1', aggregateId: '1', type: 'location.changed_name.event', payload: { name: 'Hello' } },
@@ -174,7 +174,7 @@ describe('Repository', () => {
       factory
     );
 
-    expect(repository.findById('1')).rejects.toThrow();
+    await expect(repository.findById('1')).rejects.toThrow();
   });
 
   it('removes and retries snapshot create when snapshot is broken', async () => {

@@ -1,5 +1,4 @@
 import { LoggerFactory } from 'slf';
-// @ts-expect-error TS7016: Could not find a declaration file for module 'slf-debug'
 import sdebug from 'slf-debug';
 import { Location, RegisterNamePayload } from './__fixtures__/Location';
 
