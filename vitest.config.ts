@@ -9,7 +9,6 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       reportsDirectory: 'coverage'
     },
-    testTimeout: 2000,
-    setupFiles: ['./vitest-setup.ts']
+    testTimeout: 2000
   }
 });
