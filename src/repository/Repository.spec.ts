@@ -1,4 +1,5 @@
 import { Location, RegisterNamePayload } from '../aggregate/__fixtures__/Location';
+import BluebirdPromise from 'bluebird';
 import { Repository } from '../repository';
 import { BasicPartition } from './__fixtures__/BasicPartition';
 import { ConflictPartition } from './__fixtures__/ConflictPartition';
@@ -108,6 +109,31 @@ describe('Repository', () => {
 
       const savedLocation = await repository.save(location);
       expect(savedLocation.getUncommittedEvents()).toHaveLength(0);
+    });
+
+    it('save should skip snapshot persistence when command fails and no events exist', async () => {
+      class SnapshotOnSavePartition extends BasicPartition<Location> {
+        private _snapshotVersion: number | undefined;
+
+        storeSnapshot(id: string, snapshot?: Location['_state'], version?: number) {
+          this._snapshotVersion = version;
+          return BluebirdPromise.resolve();
+        }
+
+        getSnapshotVersion() {
+          return this._snapshotVersion;
+        }
+      }
+
+      const partition = new SnapshotOnSavePartition();
+      const repository = new Repository<Location>(partition, 'location', factory);
+      const location = await repository.findById('ID_THAT_DO_NOT_EXIST');
+
+      await expect(location.failName('fail early')).rejects.toThrow('Failing early');
+      await repository.save(location);
+
+      expect(partition.getSnapshotVersion()).toBeUndefined();
+      expect(location.getVersion()).toBe(-1);
     });
   });
   describe('conflict strategy', () => {

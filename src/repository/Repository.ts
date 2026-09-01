@@ -180,6 +180,11 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
       .openStream(aggregate.id, true)
       .then((stream) => {
         return aggregate.getUncommittedEventsAsync<Payload>().then((uncommittedEvents) => {
+          if (uncommittedEvents.length === 0) {
+            LOG.debug('%s save skipped: no uncommitted events for aggregate %s', this._aggregateType, aggregate.id);
+            return aggregate;
+          }
+
           const deleteEvent = this._getDeleteEvent(uncommittedEvents);
           if (deleteEvent) {
             return this._delete(aggregate, deleteEvent);
