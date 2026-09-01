@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid';
-import Promise from 'bluebird';
+import BluebirdPromise from 'bluebird';
 import { Aggregate } from '../aggregate';
 import { Event } from '../aggregate/Aggregate.interfaces';
 import { AggregateFactory, DefaultFactory } from '../aggregate/DefaultFactory';
@@ -137,7 +137,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
   checkConcurrencyStrategy(aggregate: T, stream: Stream<Payload>, uncommittedEvents: Array<Event<Payload>>): Promise<boolean> {
     const isNewStream = stream._version === -1;
     let shouldThrow = false;
-    return new Promise((resolve) => {
+    return new BluebirdPromise((resolve) => {
       if (!isNewStream && this._concurrencyStrategy) {
         const numberOfEvents = uncommittedEvents.length;
         const nextStreamVersion = stream._version + numberOfEvents;
@@ -177,7 +177,7 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
 
   save(aggregate: T, commitId?: string, callback?: Callback<T>): Promise<T> {
     let savingWithId = commitId;
-    return Promise.resolve(aggregate.getUncommittedEventsAsync<Payload>())
+    return BluebirdPromise.resolve(aggregate.getUncommittedEventsAsync<Payload>())
       .then((uncommittedEvents) => {
         if (uncommittedEvents.length === 0) {
           return aggregate;
