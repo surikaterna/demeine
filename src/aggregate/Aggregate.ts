@@ -10,6 +10,13 @@ import { DefaultCommandHandler } from './DefaultCommandHandler';
 const LOG = LoggerFactory.getLogger('demeine:aggregate');
 type MaybePromise<T> = T | Promise<T>;
 
+function cloneState<T>(state: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(state);
+  }
+  return JSON.parse(JSON.stringify(state)) as T;
+}
+
 function _promise<T>(result?: globalThis.Promise<T>, warning?: string): globalThis.Promise<T | true> {
   if (!result?.then) {
     LOG.warn(warning || 'not returning promise as expected');
@@ -61,7 +68,7 @@ export class Aggregate<State extends object = object> {
     LOG.info('rehydrating aggregate with %d events to version %d has snapshot %s', events.length, version, snapshot !== undefined);
     // do another way?
     if (snapshot) {
-      this._state = snapshot;
+      this._state = cloneState(snapshot);
     }
     for (let i = 0; i < events.length; i++) {
       this._apply(events[i], false);
@@ -100,6 +107,10 @@ export class Aggregate<State extends object = object> {
 
   _process(command: Command): Promise<Aggregate<State>> {
     LOG.info('processing command %j', command);
+    const versionBefore = this._version;
+    const stateBefore = cloneState(this._state);
+    const uncommittedEventsBefore = this._uncommittedEvents.slice();
+
     return new BluebirdPromise((resolve, reject) => {
       try {
         const handler = this._commandHandler.handle(this, command);
@@ -107,9 +118,11 @@ export class Aggregate<State extends object = object> {
       } catch (error) {
         reject(error);
       }
-    }).error((error) => {
+    }).catch((error) => {
       LOG.error('Failed to process command %j. Error: %s', command, getMessageFromError(error));
-      this.clearUncommittedEvents();
+      this._version = versionBefore;
+      this._state = stateBefore;
+      this._uncommittedEvents = uncommittedEventsBefore;
       throw error;
     });
   }

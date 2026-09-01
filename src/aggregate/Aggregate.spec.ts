@@ -60,5 +60,42 @@ describe('Aggregate', () => {
       const events = await location.getUncommittedEventsAsync();
       expect(events).toHaveLength(0);
     });
+
+    it('should rollback state, version and preserve previous uncommitted events on failed command', async () => {
+      const location = new Location();
+
+      await location.registerName('before-failure');
+      const versionBeforeFailure = location.getVersion();
+
+      await expect(location.failName('bad-change')).rejects.toThrow('uh oh');
+
+      const events = await location.getUncommittedEventsAsync<RegisterNamePayload>();
+      expect(events).toHaveLength(1);
+      expect(events[0].payload.name).toBe('before-failure');
+      expect(location.getVersion()).toBe(versionBeforeFailure);
+      expect(location._state.name).toBe('before-failure');
+    });
+  });
+
+  describe('#_rehydrate', () => {
+    it('should not mutate provided snapshot object by reference', async () => {
+      const location = new Location();
+      const snapshot = { name: 'snapshot-name' };
+
+      await location._rehydrate(
+        [
+          {
+            type: 'location.changed_name.event',
+            payload: { name: 'rehydrated-name' },
+            aggregateId: '1'
+          }
+        ],
+        1,
+        snapshot
+      );
+
+      expect(snapshot.name).toBe('snapshot-name');
+      expect(location._state.name).toBe('rehydrated-name');
+    });
   });
 });
