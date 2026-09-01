@@ -31,6 +31,22 @@ function yieldToEventLoop() {
   });
 }
 
+function cloneObject<T extends object>(value: T): T {
+  try {
+    if (typeof globalThis.structuredClone === 'function') {
+      return globalThis.structuredClone(value);
+    }
+  } catch {
+    // Ignore and fallback below.
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value)) as T;
+  } catch {
+    return { ...value };
+  }
+}
+
 export class Aggregate<State extends object = object> {
   id: string;
   type?: string;
@@ -61,7 +77,7 @@ export class Aggregate<State extends object = object> {
     LOG.info('rehydrating aggregate with %d events to version %d has snapshot %s', events.length, version, snapshot !== undefined);
     // do another way?
     if (snapshot) {
-      this._state = snapshot;
+      this._state = cloneObject(snapshot);
     }
     for (let i = 0; i < events.length; i++) {
       this._apply(events[i], false);
@@ -100,6 +116,10 @@ export class Aggregate<State extends object = object> {
 
   _process(command: Command): Promise<Aggregate<State>> {
     LOG.info('processing command %j', command);
+    const previousVersion = this._version;
+    const previousState = cloneObject(this._state);
+    const previousUncommittedEvents = this._uncommittedEvents.slice();
+
     return new BluebirdPromise((resolve, reject) => {
       try {
         const handler = this._commandHandler.handle(this, command);
@@ -107,9 +127,11 @@ export class Aggregate<State extends object = object> {
       } catch (error) {
         reject(error);
       }
-    }).error((error) => {
+    }).catch((error) => {
       LOG.error('Failed to process command %j. Error: %s', command, getMessageFromError(error));
-      this.clearUncommittedEvents();
+      this._version = previousVersion;
+      this._state = previousState;
+      this._uncommittedEvents = previousUncommittedEvents;
       throw error;
     });
   }

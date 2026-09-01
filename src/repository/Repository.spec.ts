@@ -109,6 +109,40 @@ describe('Repository', () => {
       const savedLocation = await repository.save(location);
       expect(savedLocation.getUncommittedEvents()).toHaveLength(0);
     });
+
+    it('save should not store snapshot when command fails early and no events were committed', async () => {
+      const partition = new SnapshotPartition<Location>({ id: '1', version: 1, snapshot: { name: 'Initial' } }, []);
+      const storeSnapshotSpy = jest.spyOn(partition, 'storeSnapshot');
+
+      const repository = new Repository<Location>(partition, 'location', factory);
+      const location = await repository.findById('1');
+
+      await expect(location.failName('fail early')).rejects.toThrow('Failing early');
+      await repository.save(location);
+
+      const snapshot = await partition.loadSnapshot('1');
+      expect(storeSnapshotSpy).not.toHaveBeenCalled();
+      expect(snapshot?.version).toBe(1);
+      expect(snapshot?.snapshot?.name).toBe('Initial');
+    });
+
+    it('save should not store snapshot when command fails asynchronously and rolls back aggregate state', async () => {
+      const partition = new SnapshotPartition<Location>({ id: '1', version: 1, snapshot: { name: 'Initial' } }, []);
+      const storeSnapshotSpy = jest.spyOn(partition, 'storeSnapshot');
+
+      const repository = new Repository<Location>(partition, 'location', factory);
+      const location = await repository.findById('1');
+
+      await expect(location.failName('will fail')).rejects.toThrow('uh oh');
+      await repository.save(location);
+
+      const snapshot = await partition.loadSnapshot('1');
+      expect(storeSnapshotSpy).not.toHaveBeenCalled();
+      expect(snapshot?.version).toBe(1);
+      expect(snapshot?.snapshot?.name).toBe('Initial');
+      expect(location.getVersion()).toBe(1);
+      expect(location._getSnapshot()?.name).toBe('Initial');
+    });
   });
   describe('conflict strategy', () => {
     it('should throw in conflictStrategy with committedEvents', async () => {

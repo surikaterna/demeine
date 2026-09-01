@@ -1,4 +1,5 @@
 import { v4 as uuid } from 'uuid';
+import Promise from 'bluebird';
 import { Aggregate } from '../aggregate';
 import { Event } from '../aggregate/Aggregate.interfaces';
 import { AggregateFactory, DefaultFactory } from '../aggregate/DefaultFactory';
@@ -176,65 +177,68 @@ export class Repository<T extends Aggregate = Aggregate, Payload extends object 
 
   save(aggregate: T, commitId?: string, callback?: Callback<T>): Promise<T> {
     let savingWithId = commitId;
-    return this._partition
-      .openStream(aggregate.id, true)
-      .then((stream) => {
-        return aggregate.getUncommittedEventsAsync<Payload>().then((uncommittedEvents) => {
+    return Promise.resolve(aggregate.getUncommittedEventsAsync<Payload>())
+      .then((uncommittedEvents) => {
+        if (uncommittedEvents.length === 0) {
+          return aggregate;
+        }
+
+        return this._partition.openStream(aggregate.id, true).then((stream) => {
           const deleteEvent = this._getDeleteEvent(uncommittedEvents);
           if (deleteEvent) {
             return this._delete(aggregate, deleteEvent);
-          } else {
-            const startAggregateVersion = aggregate.getVersion() - uncommittedEvents.length;
-            const startStreamVersion = stream._version;
-            return this.checkConcurrencyStrategy(aggregate, stream, uncommittedEvents).then((shouldThrow) => {
-              if (shouldThrow === true) {
-                throw new Error('Concurrency error. Version mismatch on stream');
-              }
-              aggregate.clearUncommittedEvents();
-              savingWithId = savingWithId || uuid();
-              uncommittedEvents.forEach((event) => {
-                LOG.debug('%s append event - %s', this._aggregateType, event.id);
-                stream.append(event);
-              });
-              return stream
-                .commit(savingWithId)
-                .then(() => {
-                  LOG.info('Aggregate: %s committed %d events with id: %s', this._aggregateType, uncommittedEvents.length, savingWithId);
-                  if (this._partition.storeSnapshot !== undefined && aggregate._getSnapshot) {
-                    LOG.debug('Persisting snapshot for stream %s version %s', aggregate.id, aggregate.getVersion());
-                    if (startStreamVersion > startAggregateVersion) {
-                      LOG.warn(
-                        'IGNORING SNAPSHOT STORE. VERSION MISMATCH MIGHT LEAD TO SNAPSHOT FAILURE. for stream %s version %s - start stream version: %s - start aggregate version: %s',
-                        aggregate.id,
-                        aggregate.getVersion(),
-                        startStreamVersion,
-                        startAggregateVersion
-                      );
-                    } else {
-                      LOG.debug(
-                        'Persisting snapshot for stream %s version %s - start stream version: %s - start aggregate version: %s',
-                        aggregate.id,
-                        aggregate.getVersion(),
-                        startStreamVersion,
-                        startAggregateVersion
-                      );
-                      this._partition.storeSnapshot(aggregate.id, aggregate._getSnapshot(), aggregate.getVersion());
-                    }
-                  }
-                  return aggregate;
-                })
-                .error((err) => {
-                  LOG.debug(
-                    'Unable to save commit id: %s for type: %s, with %d events. Error: %s',
-                    savingWithId,
-                    this._aggregateType,
-                    uncommittedEvents.length,
-                    getMessageFromError(err)
-                  );
-                  throw err;
-                });
-            });
           }
+
+          const startAggregateVersion = aggregate.getVersion() - uncommittedEvents.length;
+          const startStreamVersion = stream._version;
+          return this.checkConcurrencyStrategy(aggregate, stream, uncommittedEvents).then((shouldThrow) => {
+            if (shouldThrow === true) {
+              throw new Error('Concurrency error. Version mismatch on stream');
+            }
+            aggregate.clearUncommittedEvents();
+            savingWithId = savingWithId || uuid();
+            uncommittedEvents.forEach((event) => {
+              LOG.debug('%s append event - %s', this._aggregateType, event.id);
+              stream.append(event);
+            });
+            return stream
+              .commit(savingWithId)
+              .then(() => {
+                LOG.info('Aggregate: %s committed %d events with id: %s', this._aggregateType, uncommittedEvents.length, savingWithId);
+                if (this._partition.storeSnapshot !== undefined && aggregate._getSnapshot) {
+                  LOG.debug('Persisting snapshot for stream %s version %s', aggregate.id, aggregate.getVersion());
+                  if (startStreamVersion > startAggregateVersion) {
+                    LOG.warn(
+                      'IGNORING SNAPSHOT STORE. VERSION MISMATCH MIGHT LEAD TO SNAPSHOT FAILURE. for stream %s version %s - start stream version: %s - start aggregate version: %s',
+                      aggregate.id,
+                      aggregate.getVersion(),
+                      startStreamVersion,
+                      startAggregateVersion
+                    );
+                  } else {
+                    LOG.debug(
+                      'Persisting snapshot for stream %s version %s - start stream version: %s - start aggregate version: %s',
+                      aggregate.id,
+                      aggregate.getVersion(),
+                      startStreamVersion,
+                      startAggregateVersion
+                    );
+                    this._partition.storeSnapshot(aggregate.id, aggregate._getSnapshot(), aggregate.getVersion());
+                  }
+                }
+                return aggregate;
+              })
+              .error((err) => {
+                LOG.debug(
+                  'Unable to save commit id: %s for type: %s, with %d events. Error: %s',
+                  savingWithId,
+                  this._aggregateType,
+                  uncommittedEvents.length,
+                  getMessageFromError(err)
+                );
+                throw err;
+              });
+          });
         });
       })
       .nodeify(callback);

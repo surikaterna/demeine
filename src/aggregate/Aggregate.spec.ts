@@ -60,5 +60,32 @@ describe('Aggregate', () => {
       const events = await location.getUncommittedEventsAsync();
       expect(events).toHaveLength(0);
     });
+
+    it('should rollback state, version and uncommitted events when process fails after apply', async () => {
+      const location = new Location();
+      await location.registerName('Initial Name');
+
+      const beforeFailureVersion = location.getVersion();
+      const beforeFailureSnapshot = { ...location._getSnapshot() };
+      const beforeFailureEvents = await location.getUncommittedEventsAsync<RegisterNamePayload>();
+      const beforeFailureEventsSnapshot = beforeFailureEvents.map((event) => ({
+        type: event.type,
+        aggregateId: event.aggregateId,
+        payload: { ...event.payload }
+      }));
+
+      await expect(location.failName('Will Fail')).rejects.toThrow('uh oh');
+
+      const afterFailureEvents = await location.getUncommittedEventsAsync<RegisterNamePayload>();
+      expect(location.getVersion()).toBe(beforeFailureVersion);
+      expect(location._getSnapshot()).toEqual(beforeFailureSnapshot);
+      expect(
+        afterFailureEvents.map((event) => ({
+          type: event.type,
+          aggregateId: event.aggregateId,
+          payload: { ...event.payload }
+        }))
+      ).toEqual(beforeFailureEventsSnapshot);
+    });
   });
 });
