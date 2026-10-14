@@ -12,6 +12,7 @@
     "build:types": "tsc",
     "build:types:watch": "npm run build:types -- --watch",
     "test": "jest --colors",
+    "test:types-packed": "node test/packed-types.mjs",
     "test:watch": "npm test -- --watch",
     "test:coverage": "npm test -- --collectCoverage",
     "test:coverage:start": "npm run test:coverage && start coverage/lcov-report/index.html",
@@ -39,7 +40,6 @@
     "@swc/cli": "^0.1.57",
     "@swc/core": "^1.2.237",
     "@swc/jest": "^0.2.22",
-    "@types/bluebird": "^3.5.36",
     "@types/jest": "^29.5.1",
     "@types/node": "^18.7.6",
     "@types/uuid": "^9.0.1",
@@ -55,6 +55,7 @@
   },
   "homepage": "https://github.com/surikaterna/demeine",
   "dependencies": {
+    "@types/bluebird": "^3.5.36",
     "bluebird": "^3.7.2",
     "p-queue": "^6.6.2",
     "slf": "^2.0.2",
